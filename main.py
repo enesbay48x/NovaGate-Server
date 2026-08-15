@@ -1,26 +1,28 @@
 from fastapi import FastAPI
 from database import *
 
-app = FastAPI(
-    title="NovaGate Server",
-    version="1.0"
-)
+app = FastAPI()
 
 
-# Veritabanı tablolarını oluştur
 create_tables()
 
 
 @app.get("/")
 def home():
+
     return {
-        "server": "NovaGate Server",
-        "status": "online"
+        "sunucu":"NovaGate Sunucusu",
+        "durum":"çevrimiçi"
     }
 
 
+
 @app.post("/register")
-def register(username: str, password: str, company: str):
+def register(
+    username:str,
+    password:str,
+    company:str
+):
 
     player_id = create_player(
         username,
@@ -29,38 +31,70 @@ def register(username: str, password: str, company: str):
     )
 
     return {
-        "success": True,
-        "player_id": player_id
+        "basarili":True,
+        "oyuncu_id":player_id
     }
 
 
+
 @app.post("/login")
-def login(username: str, password: str):
+def login(
+    username:str,
+    password:str
+):
 
     player = login_player(
         username,
         password
     )
 
+
     if player:
+
         return {
-            "success": True,
-            "player": {
-                "id": player[0],
-                "username": player[1],
-                "company": player[3]
+            "basarili":True,
+            "oyuncu":{
+                "id":player[0],
+                "username":player[1],
+                "company":player[3],
+                "level":player[4],
+                "bitcoin":player[5],
+                "uridium":player[6],
+                "ship":player[7],
+                "map":player[8]
             }
         }
 
+
     return {
-        "success": False,
-        "message": "Kullanıcı adı veya şifre yanlış"
+        "basarili":False,
+        "mesaj":"Kullanıcı adı veya şifre yanlış"
     }
 
 
-@app.get("/test")
-def test():
+
+@app.get("/player/{player_id}")
+def player_info(player_id:int):
+
+    player=get_player(player_id)
+
+
+    if player:
+
+        return {
+            "id":player[0],
+            "username":player[1],
+            "company":player[3],
+            "level":player[4],
+            "bitcoin":player[5],
+            "uridium":player[6],
+            "ship":player[7],
+            "map":player[8],
+            "x":player[9],
+            "y":player[10]
+        }
+
 
     return {
-        "message": "NovaGate bağlantı testi başarılı"
+        "hata":"Oyuncu bulunamadı"
     }
