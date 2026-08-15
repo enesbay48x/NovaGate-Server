@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+
 
 DB_NAME = "novagate.db"
 
@@ -8,54 +8,132 @@ def connect():
     return sqlite3.connect(DB_NAME)
 
 
-def create_tables():
-    conn = connect()
-    cur = conn.cursor()
 
-    cur.execute("""
+def create_tables():
+
+    db = connect()
+    cursor = db.cursor()
+
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS players(
+
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+
         username TEXT UNIQUE,
+
         password TEXT,
+
         company TEXT,
+
         level INTEGER DEFAULT 1,
+
+        exp INTEGER DEFAULT 0,
+
+        honor INTEGER DEFAULT 0,
+
         bitcoin INTEGER DEFAULT 0,
-        uridium INTEGER DEFAULT 0,
+
+        plt INTEGER DEFAULT 0,
+
         ship TEXT DEFAULT 'Başlangıç Gemisi',
+
         map TEXT DEFAULT 'x-1',
-        pos_x REAL DEFAULT 0,
-        pos_y REAL DEFAULT 0,
-        created TEXT
+
+        pos_x INTEGER DEFAULT 0,
+
+        pos_y INTEGER DEFAULT 0
+
     )
     """)
 
-    conn.commit()
-    conn.close()
+
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS inventory(
+
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        player_id INTEGER,
+
+        item_type TEXT,
+
+        item_name TEXT,
+
+        amount INTEGER DEFAULT 1
+
+    )
+    """)
+
+
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS ships(
+
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        player_id INTEGER,
+
+        ship_name TEXT,
+
+        active INTEGER DEFAULT 0
+
+    )
+    """)
+
+
+
+    db.commit()
+    db.close()
 
 
 
 def create_player(username,password,company):
 
-    conn = connect()
-    cur = conn.cursor()
+    db = connect()
+    cursor = db.cursor()
 
-    cur.execute("""
+
+    cursor.execute("""
     INSERT INTO players
-    (username,password,company,created)
-    VALUES (?,?,?,?)
+    (
+    username,
+    password,
+    company
+    )
+
+    VALUES(?,?,?)
     """,
     (
-        username,
-        password,
-        company,
-        str(datetime.now())
+    username,
+    password,
+    company
     ))
 
-    conn.commit()
 
-    player_id = cur.lastrowid
+    player_id = cursor.lastrowid
 
-    conn.close()
+
+    cursor.execute("""
+    INSERT INTO ships
+    (
+    player_id,
+    ship_name,
+    active
+    )
+
+    VALUES(?,?,?)
+    """,
+    (
+    player_id,
+    "Başlangıç Gemisi",
+    1
+    ))
+
+
+    db.commit()
+    db.close()
+
 
     return player_id
 
@@ -63,19 +141,27 @@ def create_player(username,password,company):
 
 def login_player(username,password):
 
-    conn = connect()
-    cur = conn.cursor()
+    db = connect()
+    cursor = db.cursor()
 
-    cur.execute("""
+
+    cursor.execute("""
     SELECT *
     FROM players
     WHERE username=? AND password=?
+
     """,
-    (username,password))
+    (
+    username,
+    password
+    ))
 
-    player = cur.fetchone()
 
-    conn.close()
+    player = cursor.fetchone()
+
+
+    db.close()
+
 
     return player
 
@@ -83,18 +169,24 @@ def login_player(username,password):
 
 def get_player(player_id):
 
-    conn = connect()
-    cur = conn.cursor()
+    db = connect()
+    cursor = db.cursor()
 
-    cur.execute("""
+
+    cursor.execute(
+    """
     SELECT *
     FROM players
     WHERE id=?
     """,
-    (player_id,))
+    (player_id,)
+    )
 
-    player = cur.fetchone()
 
-    conn.close()
+    player = cursor.fetchone()
+
+
+    db.close()
+
 
     return player
