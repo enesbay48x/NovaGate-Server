@@ -1,44 +1,100 @@
 import sqlite3
-import random
+from datetime import datetime
 
-DB="novagate.db"
+DB_NAME = "novagate.db"
+
 
 def connect():
-    return sqlite3.connect(DB)
+    return sqlite3.connect(DB_NAME)
+
 
 def create_tables():
-    db=connect()
-    cur=db.cursor()
-    cur.execute('''CREATE TABLE IF NOT EXISTS players(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    player_id INTEGER UNIQUE,
-    username TEXT UNIQUE,
-    password TEXT,
-    company TEXT,
-    ship_name TEXT,
-    ship_type TEXT
-    )''')
-    db.commit()
-    db.close()
+    conn = connect()
+    cur = conn.cursor()
 
-def generate_id():
-    return random.randint(10000000,99999999)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS players(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT,
+        company TEXT,
+        level INTEGER DEFAULT 1,
+        bitcoin INTEGER DEFAULT 0,
+        uridium INTEGER DEFAULT 0,
+        ship TEXT DEFAULT 'Başlangıç Gemisi',
+        map TEXT DEFAULT 'x-1',
+        pos_x REAL DEFAULT 0,
+        pos_y REAL DEFAULT 0,
+        created TEXT
+    )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
 
 def create_player(username,password,company):
-    db=connect()
-    cur=db.cursor()
-    pid=generate_id()
-    cur.execute(
-    "INSERT INTO players(player_id,username,password,company,ship_name,ship_type) VALUES(?,?,?,?,?,?)",
-    (pid,username,password,company,username+"_Ship","Starter"))
-    db.commit()
-    db.close()
-    return pid
+
+    conn = connect()
+    cur = conn.cursor()
+
+    cur.execute("""
+    INSERT INTO players
+    (username,password,company,created)
+    VALUES (?,?,?,?)
+    """,
+    (
+        username,
+        password,
+        company,
+        str(datetime.now())
+    ))
+
+    conn.commit()
+
+    player_id = cur.lastrowid
+
+    conn.close()
+
+    return player_id
+
+
 
 def login_player(username,password):
-    db=connect()
-    cur=db.cursor()
-    cur.execute("SELECT * FROM players WHERE username=? AND password=?",(username,password))
-    data=cur.fetchone()
-    db.close()
-    return data
+
+    conn = connect()
+    cur = conn.cursor()
+
+    cur.execute("""
+    SELECT *
+    FROM players
+    WHERE username=? AND password=?
+    """,
+    (username,password))
+
+    player = cur.fetchone()
+
+    conn.close()
+
+    return player
+
+
+
+def get_player(player_id):
+
+    conn = connect()
+    cur = conn.cursor()
+
+    cur.execute("""
+    SELECT *
+    FROM players
+    WHERE id=?
+    """,
+    (player_id,))
+
+    player = cur.fetchone()
+
+    conn.close()
+
+    return player
