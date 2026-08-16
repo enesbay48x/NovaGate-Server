@@ -454,3 +454,57 @@ def buy_droid_by_username(username, droid_type, currency, price_steps):
     finally:
         cursor.close()
         db.close()
+
+# === NovaGate persistent online world v1 ===
+def ensure_online_world_tables():
+    db = connect(); c = db.cursor()
+    c.execute("""CREATE TABLE IF NOT EXISTS player_effects(
+        player_id INTEGER PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+        ema_end DOUBLE PRECISION DEFAULT 0, nukleer_end DOUBLE PRECISION DEFAULT 0,
+        onluk_end DOUBLE PRECISION DEFAULT 0, enc_cooldown_end DOUBLE PRECISION DEFAULT 0,
+        enc_active_end DOUBLE PRECISION DEFAULT 0, kalkan_cooldown_end DOUBLE PRECISION DEFAULT 0,
+        kalkan_active_end DOUBLE PRECISION DEFAULT 0, updated_at DOUBLE PRECISION DEFAULT 0)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS npc_world(
+        npc_id TEXT PRIMARY KEY, map TEXT NOT NULL, npc_type TEXT NOT NULL,
+        pos_x DOUBLE PRECISION NOT NULL, pos_y DOUBLE PRECISION NOT NULL,
+        health DOUBLE PRECISION NOT NULL, shield DOUBLE PRECISION NOT NULL DEFAULT 0,
+        max_health DOUBLE PRECISION NOT NULL, move_speed DOUBLE PRECISION NOT NULL,
+        passive BOOLEAN DEFAULT FALSE, alive BOOLEAN DEFAULT TRUE,
+        respawn_at DOUBLE PRECISION DEFAULT 0, updated_at DOUBLE PRECISION DEFAULT 0)""")
+    c.execute("""ALTER TABLE players ADD COLUMN IF NOT EXISTS last_seen DOUBLE PRECISION DEFAULT 0""")
+    db.commit(); c.close(); db.close()
+
+def update_player_presence(username, map_name, x, y, now_ts):
+    db=connect(); c=db.cursor(); c.execute("UPDATE players SET map=%s,pos_x=%s,pos_y=%s,last_seen=%s WHERE username=%s",(map_name,int(x),int(y),float(now_ts),username)); changed=c.rowcount; db.commit(); c.close(); db.close(); return changed>0
+
+def get_online_players(map_name, now_ts, exclude_username="", ttl=12.0):
+    db=connect(); c=db.cursor(); c.execute("SELECT id,username,nickname,company,ship,map,pos_x,pos_y,last_seen FROM players WHERE map=%s AND last_seen >= %s AND username<>%s ORDER BY id",(map_name,float(now_ts)-ttl,exclude_username)); rows=c.fetchall(); c.close(); db.close(); return rows
+
+def get_effects(username):
+    db=connect(); c=db.cursor(); c.execute("SELECT id FROM players WHERE username=%s",(username,)); p=c.fetchone()
+    if not p: c.close(); db.close(); return None
+    c.execute("INSERT INTO player_effects(player_id) VALUES(%s) ON CONFLICT(player_id) DO NOTHING",(p['id'],)); db.commit(); c.execute("SELECT * FROM player_effects WHERE player_id=%s",(p['id'],)); row=c.fetchone(); c.close(); db.close(); return row
+
+def set_effect(username, key, cooldown_end, active_end, now_ts):
+    allowed={'ema':('ema_end',None),'nukleer':('nukleer_end',None),'onluk':('onluk_end',None),'enc':('enc_cooldown_end','enc_active_end'),'kalkan':('kalkan_cooldown_end','kalkan_active_end')}
+    if key not in allowed: return False
+    db=connect(); c=db.cursor(); c.execute("SELECT id FROM players WHERE username=%s",(username,)); p=c.fetchone()
+    if not p: c.close(); db.close(); return False
+    c.execute("INSERT INTO player_effects(player_id) VALUES(%s) ON CONFLICT(player_id) DO NOTHING",(p['id'],))
+    cd,active=allowed[key]
+    if active:
+        c.execute(f"UPDATE player_effects SET {cd}=%s,{active}=%s,updated_at=%s WHERE player_id=%s",(float(cooldown_end),float(active_end),float(now_ts),p['id']))
+    else:
+        c.execute(f"UPDATE player_effects SET {cd}=%s,updated_at=%s WHERE player_id=%s",(float(cooldown_end),float(now_ts),p['id']))
+    db.commit(); c.close(); db.close(); return True
+
+def get_npc_world(map_name):
+    db=connect(); c=db.cursor(); c.execute("SELECT * FROM npc_world WHERE map=%s ORDER BY npc_id",(map_name,)); rows=c.fetchall(); c.close(); db.close(); return rows
+
+def upsert_npc_world(npc_id,map_name,npc_type,x,y,health,shield,max_health,move_speed,passive,alive,respawn_at,now_ts):
+    db=connect(); c=db.cursor(); c.execute("""INSERT INTO npc_world(npc_id,map,npc_type,pos_x,pos_y,health,shield,max_health,move_speed,passive,alive,respawn_at,updated_at)
+    VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    ON CONFLICT(npc_id) DO UPDATE SET map=EXCLUDED.map,npc_type=EXCLUDED.npc_type,pos_x=EXCLUDED.pos_x,pos_y=EXCLUDED.pos_y,health=EXCLUDED.health,shield=EXCLUDED.shield,max_health=EXCLUDED.max_health,move_speed=EXCLUDED.move_speed,passive=EXCLUDED.passive,alive=EXCLUDED.alive,respawn_at=EXCLUDED.respawn_at,updated_at=EXCLUDED.updated_at""",(npc_id,map_name,npc_type,float(x),float(y),float(health),float(shield),float(max_health),float(move_speed),bool(passive),bool(alive),float(respawn_at),float(now_ts))); db.commit(); c.close(); db.close(); return True
+
+def delete_map_npcs(map_name):
+    db=connect(); c=db.cursor(); c.execute("DELETE FROM npc_world WHERE map=%s",(map_name,)); db.commit(); c.close(); db.close()
