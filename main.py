@@ -169,3 +169,37 @@ def admin_add_plt(username: str, amount: int):
         "toplam_plt": player["plt"],
         "mesaj": "PLT başarıyla eklendi"
     }
+
+
+@app.post("/economy/adjust")
+def economy_adjust(
+    username: str,
+    bitcoin_delta: int = 0,
+    plt_delta: int = 0,
+    xp_delta: int = 0,
+    honor_delta: int = 0
+):
+    success = adjust_player_economy(
+        username,
+        bitcoin_delta,
+        plt_delta,
+        xp_delta,
+        honor_delta
+    )
+
+    if not success:
+        return {
+            "basarili": False,
+            "mesaj": "Oyuncu bulunamadı veya bakiye yetersiz"
+        }
+
+    player = get_player_by_username(username)
+
+    return {
+        "basarili": True,
+        "username": player["username"],
+        "bitcoin": player["bitcoin"],
+        "plt": player["plt"],
+        "exp": player["exp"],
+        "honor": player["honor"]
+    }
