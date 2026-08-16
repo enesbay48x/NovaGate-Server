@@ -378,7 +378,15 @@ def world_presence(body: PresenceBody):
 def world_players(map_name: str, username: str = ""):
     now = time.time()
     rows = get_online_players(map_name, now, username)
-    return {"server_time": now, "players": [dict(r) for r in rows]}
+    rank_map = get_rank_snapshot_for_usernames([r["username"] for r in rows])
+    players = []
+    for r in rows:
+        item = dict(r)
+        rank_data = rank_map.get(str(r["username"]), {})
+        item["rank_key"] = rank_data.get("rank_key", "private")
+        item["rank_title"] = rank_data.get("rank_title", "Er")
+        players.append(item)
+    return {"server_time": now, "players": players}
 
 
 @app.post("/world/player/damage_state")
