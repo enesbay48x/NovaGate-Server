@@ -255,6 +255,7 @@ def market_buy(username: str, kind: str, item_id: str):
 # === NovaGate persistent online world v1 ===
 import time
 from pydantic import BaseModel
+from typing import List, Dict, Any
 
 ensure_online_world_tables()
 
@@ -314,3 +315,17 @@ def world_npcs(map_name: str):
 def world_npc_update(body: NPCBody):
     now=time.time(); upsert_npc_world(body.npc_id,body.map,body.npc_type,body.x,body.y,body.health,body.shield,body.max_health,body.move_speed,body.passive,body.alive,body.respawn_at,now)
     return {'basarili':True,'server_time':now}
+
+
+
+class NPCBatchPayload(BaseModel):
+    npcs: List[Dict[str, Any]]
+
+
+@app.post("/world/npcs/batch")
+def world_npcs_batch(payload: NPCBatchPayload):
+    upsert_world_npcs_batch(payload.npcs)
+    return {
+        "basarili": True,
+        "updated": len(payload.npcs)
+    }
