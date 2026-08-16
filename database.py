@@ -2,7 +2,6 @@ import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
@@ -66,19 +65,12 @@ def create_tables():
 def create_player(username, password, nickname, company=""):
     db = connect()
     cursor = db.cursor()
-
     try:
         cursor.execute("""
         INSERT INTO players(username, password, nickname, company, map)
         VALUES(%s,%s,%s,%s,%s)
         RETURNING id
-        """, (
-            username,
-            password,
-            nickname,
-            company.strip().upper(),
-            ""
-        ))
+        """, (username, password, nickname, company.strip().upper(), ""))
 
         row = cursor.fetchone()
         player_id = row["id"]
@@ -86,19 +78,13 @@ def create_player(username, password, nickname, company=""):
         cursor.execute("""
         INSERT INTO ships(player_id, ship_name, active)
         VALUES(%s,%s,%s)
-        """, (
-            player_id,
-            "Başlangıç Gemisi",
-            1
-        ))
+        """, (player_id, "Ship10", 1))
 
         db.commit()
         return player_id
-
     except psycopg2.IntegrityError:
         db.rollback()
         return None
-
     finally:
         cursor.close()
         db.close()
@@ -107,15 +93,11 @@ def create_player(username, password, nickname, company=""):
 def login_player(username, password):
     db = connect()
     cursor = db.cursor()
-
     cursor.execute("""
-    SELECT *
-    FROM players
+    SELECT * FROM players
     WHERE username=%s AND password=%s
     """, (username, password))
-
     row = cursor.fetchone()
-
     cursor.close()
     db.close()
     return row
@@ -124,15 +106,8 @@ def login_player(username, password):
 def get_player(player_id):
     db = connect()
     cursor = db.cursor()
-
-    cursor.execute("""
-    SELECT *
-    FROM players
-    WHERE id=%s
-    """, (player_id,))
-
+    cursor.execute("SELECT * FROM players WHERE id=%s", (player_id,))
     row = cursor.fetchone()
-
     cursor.close()
     db.close()
     return row
@@ -141,15 +116,8 @@ def get_player(player_id):
 def get_player_by_username(username):
     db = connect()
     cursor = db.cursor()
-
-    cursor.execute("""
-    SELECT *
-    FROM players
-    WHERE username=%s
-    """, (username,))
-
+    cursor.execute("SELECT * FROM players WHERE username=%s", (username,))
     row = cursor.fetchone()
-
     cursor.close()
     db.close()
     return row
@@ -169,50 +137,31 @@ def set_player_company_by_username(username, company):
 
     db = connect()
     cursor = db.cursor()
-
     cursor.execute("""
     UPDATE players
-    SET company=%s,
-        map=%s,
-        pos_x=0,
-        pos_y=0
+    SET company=%s, map=%s, pos_x=0, pos_y=0
     WHERE username=%s
-    """, (
-        company,
-        start_map,
-        username
-    ))
-
+    """, (company, start_map, username))
     changed = cursor.rowcount
     db.commit()
-
     cursor.close()
     db.close()
-
     return changed > 0, company, start_map
 
 
 def change_nickname(player_id, new_nickname):
     db = connect()
     cursor = db.cursor()
-
     try:
         cursor.execute("""
-        UPDATE players
-        SET nickname=%s
-        WHERE id=%s
-        """, (
-            new_nickname,
-            player_id
-        ))
-
+        UPDATE players SET nickname=%s WHERE id=%s
+        """, (new_nickname, player_id))
+        changed = cursor.rowcount
         db.commit()
-        return cursor.rowcount > 0
-
+        return changed > 0
     except psycopg2.IntegrityError:
         db.rollback()
         return False
-
     finally:
         cursor.close()
         db.close()
@@ -221,35 +170,19 @@ def change_nickname(player_id, new_nickname):
 def add_player_plt_by_username(username, amount):
     db = connect()
     cursor = db.cursor()
-
     cursor.execute("""
-    UPDATE players
-    SET plt = plt + %s
-    WHERE username=%s
-    """, (
-        amount,
-        username
-    ))
-
+    UPDATE players SET plt = plt + %s WHERE username=%s
+    """, (amount, username))
     changed = cursor.rowcount
     db.commit()
-
     cursor.close()
     db.close()
-
     return changed > 0
 
 
-def adjust_player_economy(
-    username,
-    bitcoin_delta=0,
-    plt_delta=0,
-    xp_delta=0,
-    honor_delta=0
-):
+def adjust_player_economy(username, bitcoin_delta=0, plt_delta=0, xp_delta=0, honor_delta=0):
     db = connect()
     cursor = db.cursor()
-
     cursor.execute("""
     UPDATE players
     SET bitcoin = bitcoin + %s,
@@ -260,19 +193,264 @@ def adjust_player_economy(
       AND bitcoin + %s >= 0
       AND plt + %s >= 0
     """, (
-        bitcoin_delta,
-        plt_delta,
-        xp_delta,
-        honor_delta,
-        username,
-        bitcoin_delta,
-        plt_delta
+        bitcoin_delta, plt_delta, xp_delta, honor_delta,
+        username, bitcoin_delta, plt_delta
     ))
-
     changed = cursor.rowcount
     db.commit()
+    cursor.close()
+    db.close()
+    return changed > 0
+
+
+def get_player_assets_by_username(username):
+    db = connect()
+    cursor = db.cursor()
+
+    cursor.execute("SELECT id FROM players WHERE username=%s", (username,))
+    player = cursor.fetchone()
+    if not player:
+        cursor.close()
+        db.close()
+        return {
+            "owned_ships": [],
+            "inventory": {},
+            "droid_types": []
+        }
+
+    player_id = player["id"]
+
+    cursor.execute("""
+    SELECT ship_name FROM ships
+    WHERE player_id=%s
+    ORDER BY id
+    """, (player_id,))
+    owned_ships = []
+    for row in cursor.fetchall():
+        ship_name = str(row["ship_name"])
+        if ship_name == "Başlangıç Gemisi":
+            ship_name = "Ship10"
+        if ship_name not in owned_ships:
+            owned_ships.append(ship_name)
+
+    if "Ship10" not in owned_ships:
+        owned_ships.insert(0, "Ship10")
+
+    cursor.execute("""
+    SELECT item_type, item_name, amount
+    FROM inventory
+    WHERE player_id=%s
+    ORDER BY id
+    """, (player_id,))
+
+    inventory = {}
+    droid_types = []
+
+    for row in cursor.fetchall():
+        item_type = str(row["item_type"] or "")
+        item_name = str(row["item_name"] or "")
+        amount = int(row["amount"] or 0)
+
+        if item_type == "droid":
+            for _ in range(max(0, amount)):
+                droid_types.append(item_name.upper())
+        else:
+            inventory[item_name] = inventory.get(item_name, 0) + amount
 
     cursor.close()
     db.close()
 
-    return changed > 0
+    return {
+        "owned_ships": owned_ships,
+        "inventory": inventory,
+        "droid_types": droid_types
+    }
+
+
+def _add_inventory_item(cursor, player_id, item_type, item_name, amount=1):
+    cursor.execute("""
+    SELECT id, amount
+    FROM inventory
+    WHERE player_id=%s AND item_type=%s AND item_name=%s
+    ORDER BY id
+    LIMIT 1
+    FOR UPDATE
+    """, (player_id, item_type, item_name))
+    row = cursor.fetchone()
+
+    if row:
+        cursor.execute("""
+        UPDATE inventory
+        SET amount=%s
+        WHERE id=%s
+        """, (int(row["amount"]) + amount, row["id"]))
+    else:
+        cursor.execute("""
+        INSERT INTO inventory(player_id, item_type, item_name, amount)
+        VALUES(%s,%s,%s,%s)
+        """, (player_id, item_type, item_name, amount))
+
+
+def buy_market_item_by_username(username, kind, item_id, currency, price):
+    currency = currency.upper()
+    kind = kind.lower()
+
+    db = connect()
+    cursor = db.cursor()
+
+    try:
+        cursor.execute("""
+        SELECT id, bitcoin, plt
+        FROM players
+        WHERE username=%s
+        FOR UPDATE
+        """, (username,))
+        player = cursor.fetchone()
+
+        if not player:
+            db.rollback()
+            return False, "Oyuncu bulunamadı", None
+
+        player_id = player["id"]
+        bitcoin = int(player["bitcoin"])
+        plt = int(player["plt"])
+
+        if kind == "ship":
+            cursor.execute("""
+            SELECT id FROM ships
+            WHERE player_id=%s AND ship_name=%s
+            LIMIT 1
+            """, (player_id, item_id))
+            if cursor.fetchone():
+                db.rollback()
+                return False, "Bu gemiye zaten sahipsin.", None
+
+        if currency == "BTC":
+            if bitcoin < price:
+                db.rollback()
+                return False, "Yeterli Bitcoin yok.", None
+            bitcoin -= price
+        elif currency == "PLT":
+            if plt < price:
+                db.rollback()
+                return False, "Yeterli PLT yok.", None
+            plt -= price
+        elif currency != "FREE":
+            db.rollback()
+            return False, "Geçersiz para birimi.", None
+
+        cursor.execute("""
+        UPDATE players
+        SET bitcoin=%s, plt=%s
+        WHERE id=%s
+        """, (bitcoin, plt, player_id))
+
+        if kind == "ship":
+            cursor.execute("""
+            INSERT INTO ships(player_id, ship_name, active)
+            VALUES(%s,%s,0)
+            """, (player_id, item_id))
+        elif kind == "equipment":
+            _add_inventory_item(cursor, player_id, "equipment", item_id, 1)
+        else:
+            db.rollback()
+            return False, "Geçersiz market ürün tipi.", None
+
+        db.commit()
+        return True, "Satın alma başarılı.", {
+            "bitcoin": bitcoin,
+            "plt": plt
+        }
+
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        cursor.close()
+        db.close()
+
+
+def buy_droid_by_username(username, droid_type, currency, price_steps):
+    droid_type = droid_type.upper()
+    currency = currency.upper()
+
+    db = connect()
+    cursor = db.cursor()
+
+    try:
+        cursor.execute("""
+        SELECT id, bitcoin, plt
+        FROM players
+        WHERE username=%s
+        FOR UPDATE
+        """, (username,))
+        player = cursor.fetchone()
+
+        if not player:
+            db.rollback()
+            return False, "Oyuncu bulunamadı", None
+
+        player_id = player["id"]
+
+        cursor.execute("""
+        SELECT item_name, amount
+        FROM inventory
+        WHERE player_id=%s AND item_type='droid'
+        FOR UPDATE
+        """, (player_id,))
+        rows = cursor.fetchall()
+
+        total_droids = sum(int(r["amount"] or 0) for r in rows)
+        same_type_count = sum(
+            int(r["amount"] or 0)
+            for r in rows
+            if str(r["item_name"]).upper() == droid_type
+        )
+
+        if total_droids >= 8:
+            db.rollback()
+            return False, "Maksimum 8 droid sınırına ulaşıldı.", None
+
+        price_index = min(same_type_count, len(price_steps) - 1)
+        price = int(price_steps[price_index])
+
+        bitcoin = int(player["bitcoin"])
+        plt = int(player["plt"])
+
+        if currency == "BTC":
+            if bitcoin < price:
+                db.rollback()
+                return False, "Yeterli Bitcoin yok.", None
+            bitcoin -= price
+        elif currency == "PLT":
+            if plt < price:
+                db.rollback()
+                return False, "Yeterli PLT yok.", None
+            plt -= price
+        else:
+            db.rollback()
+            return False, "Geçersiz para birimi.", None
+
+        cursor.execute("""
+        UPDATE players
+        SET bitcoin=%s, plt=%s
+        WHERE id=%s
+        """, (bitcoin, plt, player_id))
+
+        _add_inventory_item(cursor, player_id, "droid", droid_type, 1)
+
+        db.commit()
+        return True, "%s droid satın alındı." % droid_type, {
+            "bitcoin": bitcoin,
+            "plt": plt,
+            "price": price,
+            "total_droids": total_droids + 1,
+            "same_type_count": same_type_count + 1
+        }
+
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        cursor.close()
+        db.close()
