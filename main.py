@@ -44,6 +44,12 @@ def player_to_dict(player):
         "map": player["map"] or "",
         "x": player["pos_x"],
         "y": player["pos_y"],
+        "health": float(player.get("health", 400000)),
+        "shield": float(player.get("shield", 0)),
+        "max_health": float(player.get("max_health", 400000)),
+        "max_shield": float(player.get("max_shield", 0)),
+        "alive": bool(player.get("alive", True)),
+        "session_active": bool(player.get("session_active", False)),
         "owned_ships": assets["owned_ships"],
         "inventory": assets["inventory"],
         "droid_types": assets["droid_types"]
@@ -252,24 +258,61 @@ def market_buy(username: str, kind: str, item_id: str):
         "droid_types": assets["droid_types"]
     }
 
-# === NovaGate persistent online world v1 ===
+# === NovaGate MMO Core V2 ===
 import time
+import threading
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
 ensure_online_world_tables()
+
 
 class PresenceBody(BaseModel):
     username: str
     map: str
     x: float
     y: float
+    health: float = -1.0
+    shield: float = -1.0
+    max_health: float = -1.0
+    max_shield: float = -1.0
+
+
+class DamageStateBody(BaseModel):
+    username: str
+    health: float
+    shield: float
+    map: str
+    x: float
+    y: float
+
+
+class LogoutBody(BaseModel):
+    username: str
+    map: str
+    x: float
+    y: float
+    health: float
+    shield: float
+
+
+class RepairBody(BaseModel):
+    username: str
+    map: str
+    x: float
+    y: float
+    health: float
+    shield: float
+    max_health: float
+    max_shield: float
+
 
 class EffectBody(BaseModel):
     username: str
     key: str
     cooldown_seconds: float
     active_seconds: float = 0.0
+
 
 class NPCBody(BaseModel):
     npc_id: str
@@ -280,52 +323,202 @@ class NPCBody(BaseModel):
     health: float
     shield: float = 0.0
     max_health: float
+    max_shield: float = 0.0
     move_speed: float
     passive: bool = False
     alive: bool = True
     respawn_at: float = 0.0
-
-@app.post('/world/presence')
-def world_presence(body: PresenceBody):
-    now=time.time(); ok=update_player_presence(body.username,body.map,body.x,body.y,now)
-    return {'basarili':ok,'server_time':now}
-
-@app.get('/world/players/{map_name}')
-def world_players(map_name: str, username: str = ''):
-    now=time.time(); rows=get_online_players(map_name,now,username)
-    return {'server_time':now,'players':[dict(r) for r in rows]}
-
-@app.get('/effects/{username}')
-def effects_get(username: str):
-    now=time.time(); row=get_effects(username)
-    return {'server_time':now,'effects':dict(row) if row else {}}
-
-@app.post('/effects/start')
-def effects_start(body: EffectBody):
-    now=time.time(); cd=now+max(0.0,body.cooldown_seconds); active=now+max(0.0,body.active_seconds)
-    ok=set_effect(body.username,body.key,cd,active,now)
-    return {'basarili':ok,'server_time':now,'cooldown_end':cd,'active_end':active}
-
-@app.get('/world/npcs/{map_name}')
-def world_npcs(map_name: str):
-    now=time.time(); rows=get_npc_world(map_name)
-    return {'server_time':now,'npcs':[dict(r) for r in rows]}
-
-@app.post('/world/npc')
-def world_npc_update(body: NPCBody):
-    now=time.time(); upsert_npc_world(body.npc_id,body.map,body.npc_type,body.x,body.y,body.health,body.shield,body.max_health,body.move_speed,body.passive,body.alive,body.respawn_at,now)
-    return {'basarili':True,'server_time':now}
-
+    target_username: str = ""
+    first_attacker_username: str = ""
+    home_x: float = 0.0
+    home_y: float = 0.0
 
 
 class NPCBatchPayload(BaseModel):
     npcs: List[Dict[str, Any]]
 
 
+class NPCClaimBody(BaseModel):
+    username: str
+    npc_id: str
+
+
+class NPCDeadBody(BaseModel):
+    npc_id: str
+    map: str
+    npc_type: str
+    x: float
+    y: float
+    max_health: float
+    max_shield: float = 0.0
+    move_speed: float
+    passive: bool = False
+    respawn_at: float
+    first_attacker_username: str = ""
+
+
+@app.post("/world/presence")
+def world_presence(body: PresenceBody):
+    now = time.time()
+    ok, state = update_player_presence(
+        body.username, body.map, body.x, body.y, now,
+        body.health, body.shield, body.max_health, body.max_shield
+    )
+    return {
+        "basarili": ok,
+        "server_time": now,
+        "health": float(state["health"]) if state else body.health,
+        "shield": float(state["shield"]) if state else body.shield,
+        "alive": bool(state["alive"]) if state else True
+    }
+
+
+@app.get("/world/players/{map_name}")
+def world_players(map_name: str, username: str = ""):
+    now = time.time()
+    rows = get_online_players(map_name, now, username)
+    return {"server_time": now, "players": [dict(r) for r in rows]}
+
+
+@app.post("/world/player/damage_state")
+def world_player_damage_state(body: DamageStateBody):
+    now = time.time()
+    state = update_player_damage_state(
+        body.username, body.health, body.shield,
+        body.map, body.x, body.y, now
+    )
+    return {
+        "basarili": state is not None,
+        "server_time": now,
+        "health": float(state["health"]) if state else body.health,
+        "shield": float(state["shield"]) if state else body.shield,
+        "alive": bool(state["alive"]) if state else body.health > 0
+    }
+
+
+@app.post("/world/logout/request")
+def world_logout_request(body: LogoutBody):
+    now = time.time()
+    row = request_player_logout(
+        body.username, body.map, body.x, body.y,
+        body.health, body.shield, now
+    )
+    return {
+        "basarili": row is not None,
+        "server_time": now,
+        "logout_deadline": float(row["logout_deadline"]) if row else 0,
+        "combat_until": float(row["combat_until"]) if row else 0,
+        "alive": bool(row["alive"]) if row else True
+    }
+
+
+@app.get("/world/player/state/{username}")
+def world_player_state(username: str):
+    now = time.time()
+    row = get_player_world_state(username)
+    return {
+        "basarili": row is not None,
+        "server_time": now,
+        "player": dict(row) if row else {}
+    }
+
+
+@app.post("/world/player/repair")
+def world_player_repair(body: RepairBody):
+    now = time.time()
+    ok = repair_player_world_state(
+        body.username, body.map, body.x, body.y,
+        body.health, body.shield, body.max_health, body.max_shield, now
+    )
+    return {"basarili": ok, "server_time": now}
+
+
+@app.get("/effects/{username}")
+def effects_get(username: str):
+    now = time.time()
+    row = get_effects(username)
+    return {"server_time": now, "effects": dict(row) if row else {}}
+
+
+@app.post("/effects/start")
+def effects_start(body: EffectBody):
+    now = time.time()
+    cd = now + max(0.0, body.cooldown_seconds)
+    active = now + max(0.0, body.active_seconds)
+    ok = set_effect(body.username, body.key, cd, active, now)
+    return {
+        "basarili": ok,
+        "server_time": now,
+        "cooldown_end": cd,
+        "active_end": active
+    }
+
+
+@app.get("/world/npcs/{map_name}")
+def world_npcs(map_name: str):
+    now = time.time()
+    rows = get_npc_world(map_name)
+    return {"server_time": now, "npcs": [dict(r) for r in rows]}
+
+
+@app.post("/world/npc")
+def world_npc_update(body: NPCBody):
+    now = time.time()
+    upsert_npc_world(
+        body.npc_id, body.map, body.npc_type, body.x, body.y,
+        body.health, body.shield, body.max_health, body.move_speed,
+        body.passive, body.alive, body.respawn_at, now,
+        body.max_shield, body.target_username, body.first_attacker_username,
+        body.home_x, body.home_y
+    )
+    return {"basarili": True, "server_time": now}
+
+
 @app.post("/world/npcs/batch")
 def world_npcs_batch(payload: NPCBatchPayload):
     upsert_world_npcs_batch(payload.npcs)
+    return {"basarili": True, "updated": len(payload.npcs), "server_time": time.time()}
+
+
+@app.post("/world/npc/claim")
+def world_npc_claim(body: NPCClaimBody):
+    row = claim_npc_first_attacker(body.npc_id, body.username)
     return {
-        "basarili": True,
-        "updated": len(payload.npcs)
+        "basarili": row is not None,
+        "first_attacker_username": str(row["first_attacker_username"]) if row else "",
+        "target_username": str(row["target_username"]) if row else ""
     }
+
+
+@app.post("/world/npc/dead")
+def world_npc_dead(body: NPCDeadBody):
+    now = time.time()
+    ok = mark_npc_dead(body.model_dump(), now)
+    return {"basarili": ok, "server_time": now}
+
+
+_world_thread_started = False
+_world_thread_lock = threading.Lock()
+
+
+def _world_loop():
+    while True:
+        try:
+            world_tick_once(time.time())
+        except Exception as exc:
+            print("MMO WORLD TICK ERROR:", repr(exc))
+        time.sleep(0.5)
+
+
+@app.on_event("startup")
+def start_mmo_world_loop():
+    global _world_thread_started
+    with _world_thread_lock:
+        if _world_thread_started:
+            return
+        _world_thread_started = True
+        threading.Thread(
+            target=_world_loop,
+            name="NovaGateWorldTick",
+            daemon=True
+        ).start()
