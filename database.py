@@ -1109,6 +1109,7 @@ def world_tick_once(now_ts):
 
 # ============================================================
 # NOVAGATE RANKING V1
+from datetime import datetime, timezone
 # DarkOrbit-style dynamic company ranking.
 # ============================================================
 
@@ -1288,6 +1289,7 @@ def get_player_ranking(username):
         "friendly_kills": int(player.get("friendly_kills", 0) or 0),
         "deaths": int(player.get("deaths", 0) or 0),
         "missions_completed": int(player.get("missions_completed", 0) or 0),
+        "days_registered": max(0, (datetime.now(timezone.utc) - (player.get("registered_at") if player.get("registered_at") is not None and player.get("registered_at").tzinfo is not None else (player.get("registered_at").replace(tzinfo=timezone.utc) if player.get("registered_at") is not None else datetime.now(timezone.utc)))).days),
         "exp": int(player.get("exp", 0) or 0),
         "honor": int(player.get("honor", 0) or 0),
         "is_admin": bool(player.get("is_admin", False)),
@@ -1357,4 +1359,46 @@ def get_ranking_leaderboard(limit=100, company=""):
             "rank_title": title,
             "rank_points": round(pts, 2)
         })
+    return result
+
+
+def get_rank_snapshot_for_usernames(usernames):
+    wanted = {str(x) for x in usernames if str(x)}
+    if not wanted:
+        return {}
+
+    db = connect()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM players ORDER BY id")
+    all_players = cursor.fetchall()
+    cursor.close()
+    db.close()
+
+    scored = [(p, _rank_points_from_row(p)) for p in all_players]
+    scored.sort(key=lambda item: (-item[1], int(item[0]["id"])))
+
+    by_company = {}
+    for p, pts in scored:
+        company = str(p.get("company", "") or "")
+        by_company.setdefault(company, []).append((p, pts))
+
+    result = {}
+    for company, company_rows in by_company.items():
+        count = len(company_rows)
+        for pos, (p, pts) in enumerate(company_rows, start=1):
+            username = str(p["username"])
+            if username not in wanted:
+                continue
+            if bool(p.get("is_admin", False)):
+                key, title = "admin", "Admin"
+            elif int(p.get("honor", 0) or 0) < 0:
+                key, title = "traitor", "Vatan Haini"
+            else:
+                key, title = _normal_rank_for_position(pos, count)
+            result[username] = {
+                "rank_key": key,
+                "rank_title": title,
+                "rank_points": round(pts, 2),
+                "company_position": pos
+            }
     return result
