@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from database import *
 
-app = FastAPI()
+app = FastAPI(
+    title="NovaGate Server",
+    version="1.0.0"
+)
 
 create_tables()
 
@@ -31,7 +34,8 @@ def player_to_dict(player):
 def home():
     return {
         "sunucu": "NovaGate Sunucusu",
-        "durum": "çevrimiçi"
+        "durum": "çevrimiçi",
+        "veritabani": "PostgreSQL"
     }
 
 
@@ -97,7 +101,6 @@ def set_company(username: str, company: str):
             "mesaj": "Oyuncu bulunamadı veya şirket geçersiz"
         }
 
-    # Kaydın gerçekten veritabanına yazıldığını tekrar okuyup doğrula.
     player = get_player_by_username(username)
 
     return {
@@ -133,8 +136,20 @@ def player_info_by_username(username: str):
 
 
 @app.post("/change_nickname")
-def change_player_nickname(player_id: int, new_nickname: str):
-    change_nickname(player_id, new_nickname)
+def change_player_nickname(
+    player_id: int,
+    new_nickname: str
+):
+    success = change_nickname(
+        player_id,
+        new_nickname
+    )
+
+    if not success:
+        return {
+            "basarili": False,
+            "mesaj": "Nick değiştirilemedi"
+        }
 
     return {
         "basarili": True,
@@ -143,14 +158,20 @@ def change_player_nickname(player_id: int, new_nickname: str):
 
 
 @app.post("/admin/add_plt")
-def admin_add_plt(username: str, amount: int):
+def admin_add_plt(
+    username: str,
+    amount: int
+):
     if amount <= 0:
         return {
             "basarili": False,
             "mesaj": "PLT miktarı 0'dan büyük olmalı"
         }
 
-    success = add_player_plt_by_username(username, amount)
+    success = add_player_plt_by_username(
+        username,
+        amount
+    )
 
     if not success:
         return {
