@@ -508,3 +508,68 @@ def upsert_npc_world(npc_id,map_name,npc_type,x,y,health,shield,max_health,move_
 
 def delete_map_npcs(map_name):
     db=connect(); c=db.cursor(); c.execute("DELETE FROM npc_world WHERE map=%s",(map_name,)); db.commit(); c.close(); db.close()
+
+
+
+def upsert_world_npcs_batch(npcs):
+    if not npcs:
+        return True
+
+    db = connect()
+    cursor = db.cursor()
+    try:
+        for npc in npcs:
+            cursor.execute("""
+                INSERT INTO world_npcs(
+                    npc_id, map_name, npc_type,
+                    pos_x, pos_y,
+                    health, max_health,
+                    shield, max_shield,
+                    move_speed, passive, alive,
+                    updated_at
+                )
+                VALUES(
+                    %s,%s,%s,
+                    %s,%s,
+                    %s,%s,
+                    %s,%s,
+                    %s,%s,%s,
+                    NOW()
+                )
+                ON CONFLICT (npc_id)
+                DO UPDATE SET
+                    map_name=EXCLUDED.map_name,
+                    npc_type=EXCLUDED.npc_type,
+                    pos_x=EXCLUDED.pos_x,
+                    pos_y=EXCLUDED.pos_y,
+                    health=EXCLUDED.health,
+                    max_health=EXCLUDED.max_health,
+                    shield=EXCLUDED.shield,
+                    max_shield=EXCLUDED.max_shield,
+                    move_speed=EXCLUDED.move_speed,
+                    passive=EXCLUDED.passive,
+                    alive=EXCLUDED.alive,
+                    updated_at=NOW()
+            """, (
+                str(npc.get("npc_id", "")),
+                str(npc.get("map_name", "")),
+                str(npc.get("npc_type", "")),
+                float(npc.get("pos_x", 0)),
+                float(npc.get("pos_y", 0)),
+                float(npc.get("health", 0)),
+                float(npc.get("max_health", 0)),
+                float(npc.get("shield", 0)),
+                float(npc.get("max_shield", 0)),
+                float(npc.get("move_speed", 0)),
+                bool(npc.get("passive", False)),
+                bool(npc.get("alive", True))
+            ))
+
+        db.commit()
+        return True
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        cursor.close()
+        db.close()
