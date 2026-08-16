@@ -145,15 +145,15 @@ def set_player_company(player_id, company):
 
     return changed > 0, start_map
 
-def add_player_plt(player_id, amount):
+def add_player_plt_by_username(username, amount):
     db = connect()
     cursor = db.cursor()
 
     cursor.execute("""
     UPDATE players
     SET plt = plt + ?
-    WHERE id = ?
-    """, (amount, player_id))
+    WHERE username = ?
+    """, (amount, username))
 
     db.commit()
 
