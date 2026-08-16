@@ -74,6 +74,79 @@ def create_tables():
     )
     """)
 
+    # NovaGate Clan System V1
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS clans(
+        id SERIAL PRIMARY KEY,
+        name TEXT UNIQUE NOT NULL,
+        tag TEXT UNIQUE NOT NULL,
+        leader_username TEXT NOT NULL,
+        company TEXT DEFAULT '',
+        description TEXT DEFAULT '',
+        treasury_bitcoin BIGINT DEFAULT 0,
+        tax_rate DOUBLE PRECISION DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS clan_roles(
+        id SERIAL PRIMARY KEY,
+        clan_id INTEGER NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        priority INTEGER DEFAULT 10,
+        permissions JSONB DEFAULT '{}'::jsonb,
+        UNIQUE(clan_id, name)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS clan_members(
+        clan_id INTEGER NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
+        username TEXT NOT NULL UNIQUE,
+        role_name TEXT DEFAULT 'Üye',
+        joined_at TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY(clan_id, username)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS clan_applications(
+        id SERIAL PRIMARY KEY,
+        clan_id INTEGER NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
+        username TEXT NOT NULL,
+        message TEXT DEFAULT '',
+        status TEXT DEFAULT 'pending',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(clan_id, username)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS clan_diplomacy(
+        id SERIAL PRIMARY KEY,
+        clan_id INTEGER NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
+        target_clan_id INTEGER NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
+        relation TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        requested_by TEXT DEFAULT '',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(clan_id, target_clan_id, relation)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS clan_messages(
+        id SERIAL PRIMARY KEY,
+        clan_id INTEGER NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
+        username TEXT NOT NULL,
+        message TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+    """)
+
+    cursor.execute("ALTER TABLE players ADD COLUMN IF NOT EXISTS last_clan_tax_at TIMESTAMPTZ DEFAULT NOW()")
+
     db.commit()
     cursor.close()
     db.close()
@@ -1098,6 +1171,8 @@ def world_tick_once(now_ts):
                 WHERE npc_id=%s
             """, (x,y,float(now_ts),row["npc_id"]))
 
+        apply_daily_clan_tax(now_ts)
+
         db.commit()
     except Exception:
         db.rollback()
@@ -1402,3 +1477,466 @@ def get_rank_snapshot_for_usernames(usernames):
                 "company_position": pos
             }
     return result
+
+
+# ============================================================
+# NOVAGATE CLAN SYSTEM V1
+# ============================================================
+import json as _clan_json
+from datetime import datetime as _clan_datetime, timezone as _clan_timezone
+
+
+CLAN_DEFAULT_PERMISSIONS = {
+    "Lider": {
+        "applications": True, "kick": True, "roles": True, "diplomacy": True,
+        "war": True, "treasury": True, "tax": True, "news": True, "invite": True
+    },
+    "Subay": {
+        "applications": True, "kick": True, "roles": False, "diplomacy": True,
+        "war": False, "treasury": False, "tax": False, "news": True, "invite": True
+    },
+    "Üye": {
+        "applications": False, "kick": False, "roles": False, "diplomacy": False,
+        "war": False, "treasury": False, "tax": False, "news": False, "invite": False
+    }
+}
+
+
+def _clan_role_permissions(cursor, clan_id, role_name):
+    cursor.execute(
+        "SELECT permissions FROM clan_roles WHERE clan_id=%s AND name=%s",
+        (clan_id, role_name)
+    )
+    row = cursor.fetchone()
+    if not row:
+        return {}
+    value = row["permissions"] or {}
+    if isinstance(value, str):
+        try:
+            value = _clan_json.loads(value)
+        except Exception:
+            value = {}
+    return dict(value)
+
+
+def get_clan_for_username(username):
+    db = connect()
+    c = db.cursor()
+    c.execute("""
+        SELECT cl.*, cm.role_name
+        FROM clan_members cm
+        JOIN clans cl ON cl.id=cm.clan_id
+        WHERE cm.username=%s
+    """, (username,))
+    row = c.fetchone()
+    c.close()
+    db.close()
+    return row
+
+
+def get_clan_tag_for_username(username):
+    row = get_clan_for_username(username)
+    return str(row["tag"]) if row else ""
+
+
+def get_clan_tags_for_usernames(usernames):
+    names = [str(x) for x in usernames if str(x)]
+    if not names:
+        return {}
+    db = connect()
+    c = db.cursor()
+    c.execute("""
+        SELECT cm.username, cl.tag
+        FROM clan_members cm
+        JOIN clans cl ON cl.id=cm.clan_id
+        WHERE cm.username = ANY(%s)
+    """, (names,))
+    rows = c.fetchall()
+    c.close()
+    db.close()
+    return {str(r["username"]): str(r["tag"]) for r in rows}
+
+
+def create_clan(leader_username, name, tag, description=""):
+    name = str(name).strip()
+    tag = str(tag).strip().upper()
+    if len(name) < 3 or len(name) > 30:
+        return False, "Klan adı 3-30 karakter olmalı", None
+    if len(tag) < 2 or len(tag) > 5 or not tag.isalnum():
+        return False, "Klan etiketi 2-5 harf/rakam olmalı", None
+    if get_clan_for_username(leader_username):
+        return False, "Zaten bir klandasın", None
+
+    db = connect()
+    c = db.cursor()
+    try:
+        c.execute("SELECT company FROM players WHERE username=%s", (leader_username,))
+        player = c.fetchone()
+        if not player:
+            return False, "Oyuncu bulunamadı", None
+
+        c.execute("""
+            INSERT INTO clans(name,tag,leader_username,company,description)
+            VALUES(%s,%s,%s,%s,%s)
+            RETURNING id
+        """, (name, tag, leader_username, str(player["company"] or ""), str(description)[:500]))
+        clan_id = int(c.fetchone()["id"])
+
+        for role_name, perms in CLAN_DEFAULT_PERMISSIONS.items():
+            priority = 100 if role_name == "Lider" else (50 if role_name == "Subay" else 10)
+            c.execute("""
+                INSERT INTO clan_roles(clan_id,name,priority,permissions)
+                VALUES(%s,%s,%s,%s::jsonb)
+                ON CONFLICT(clan_id,name) DO NOTHING
+            """, (clan_id, role_name, priority, _clan_json.dumps(perms)))
+
+        c.execute("""
+            INSERT INTO clan_members(clan_id,username,role_name)
+            VALUES(%s,%s,'Lider')
+        """, (clan_id, leader_username))
+        db.commit()
+        return True, "Klan oluşturuldu", clan_id
+    except Exception as exc:
+        db.rollback()
+        msg = str(exc)
+        if "unique" in msg.lower():
+            return False, "Bu klan adı veya etiketi kullanımda", None
+        raise
+    finally:
+        c.close()
+        db.close()
+
+
+def search_clans(query="", limit=30):
+    db = connect()
+    c = db.cursor()
+    q = "%" + str(query).strip() + "%"
+    c.execute("""
+        SELECT cl.*,
+               (SELECT COUNT(*) FROM clan_members cm WHERE cm.clan_id=cl.id) AS member_count
+        FROM clans cl
+        WHERE cl.name ILIKE %s OR cl.tag ILIKE %s
+        ORDER BY member_count DESC, cl.id ASC
+        LIMIT %s
+    """, (q, q, max(1, min(int(limit), 100))))
+    rows = c.fetchall()
+    c.close()
+    db.close()
+    return rows
+
+
+def get_clan_full(clan_id, viewer_username=""):
+    db = connect()
+    c = db.cursor()
+    c.execute("""
+        SELECT cl.*,
+               (SELECT COUNT(*) FROM clan_members cm WHERE cm.clan_id=cl.id) AS member_count
+        FROM clans cl WHERE cl.id=%s
+    """, (int(clan_id),))
+    clan = c.fetchone()
+    if not clan:
+        c.close(); db.close(); return None
+
+    c.execute("""
+        SELECT cm.username, cm.role_name, cm.joined_at,
+               p.nickname, p.company, p.last_seen, p.level, p.honor
+        FROM clan_members cm
+        JOIN players p ON p.username=cm.username
+        WHERE cm.clan_id=%s
+        ORDER BY CASE WHEN cm.role_name='Lider' THEN 0 WHEN cm.role_name='Subay' THEN 1 ELSE 2 END,
+                 p.nickname
+    """, (int(clan_id),))
+    members = [dict(r) for r in c.fetchall()]
+
+    c.execute("""
+        SELECT id,username,message,status,created_at
+        FROM clan_applications
+        WHERE clan_id=%s AND status='pending'
+        ORDER BY created_at
+    """, (int(clan_id),))
+    applications = [dict(r) for r in c.fetchall()]
+
+    c.execute("""
+        SELECT cd.*, c2.name AS target_name, c2.tag AS target_tag
+        FROM clan_diplomacy cd
+        JOIN clans c2 ON c2.id=cd.target_clan_id
+        WHERE cd.clan_id=%s
+        ORDER BY cd.created_at DESC
+    """, (int(clan_id),))
+    diplomacy = [dict(r) for r in c.fetchall()]
+
+    c.execute("""
+        SELECT username,message,created_at
+        FROM clan_messages
+        WHERE clan_id=%s
+        ORDER BY id DESC LIMIT 50
+    """, (int(clan_id),))
+    messages = [dict(r) for r in c.fetchall()]
+
+    viewer_role = ""
+    viewer_permissions = {}
+    if viewer_username:
+        c.execute(
+            "SELECT role_name FROM clan_members WHERE clan_id=%s AND username=%s",
+            (int(clan_id), viewer_username)
+        )
+        r = c.fetchone()
+        if r:
+            viewer_role = str(r["role_name"])
+            viewer_permissions = _clan_role_permissions(c, int(clan_id), viewer_role)
+
+    c.close()
+    db.close()
+    return {
+        "clan": dict(clan),
+        "members": members,
+        "applications": applications,
+        "diplomacy": diplomacy,
+        "messages": messages,
+        "viewer_role": viewer_role,
+        "permissions": viewer_permissions
+    }
+
+
+def apply_to_clan(username, clan_id, message=""):
+    if get_clan_for_username(username):
+        return False, "Zaten bir klandasın"
+    db = connect(); c = db.cursor()
+    try:
+        c.execute("""
+            INSERT INTO clan_applications(clan_id,username,message,status)
+            VALUES(%s,%s,%s,'pending')
+            ON CONFLICT(clan_id,username)
+            DO UPDATE SET message=EXCLUDED.message,status='pending',created_at=NOW()
+        """, (int(clan_id), username, str(message)[:300]))
+        db.commit()
+        return True, "Başvuru gönderildi"
+    finally:
+        c.close(); db.close()
+
+
+def _clan_has_permission(cursor, actor_username, clan_id, permission):
+    cursor.execute(
+        "SELECT role_name FROM clan_members WHERE clan_id=%s AND username=%s",
+        (int(clan_id), actor_username)
+    )
+    row = cursor.fetchone()
+    if not row:
+        return False
+    perms = _clan_role_permissions(cursor, int(clan_id), str(row["role_name"]))
+    return bool(perms.get(permission, False))
+
+
+def decide_clan_application(actor_username, application_id, accept):
+    db = connect(); c = db.cursor()
+    try:
+        c.execute("SELECT * FROM clan_applications WHERE id=%s", (int(application_id),))
+        app = c.fetchone()
+        if not app:
+            return False, "Başvuru bulunamadı"
+        clan_id = int(app["clan_id"])
+        if not _clan_has_permission(c, actor_username, clan_id, "applications"):
+            return False, "Yetkin yok"
+        if accept:
+            c.execute("SELECT 1 FROM clan_members WHERE username=%s", (app["username"],))
+            if c.fetchone():
+                return False, "Oyuncu zaten bir klanda"
+            c.execute(
+                "INSERT INTO clan_members(clan_id,username,role_name) VALUES(%s,%s,'Üye')",
+                (clan_id, app["username"])
+            )
+            status = "accepted"
+        else:
+            status = "rejected"
+        c.execute("UPDATE clan_applications SET status=%s WHERE id=%s", (status, int(application_id)))
+        db.commit()
+        return True, "Başvuru güncellendi"
+    finally:
+        c.close(); db.close()
+
+
+def leave_clan(username):
+    clan = get_clan_for_username(username)
+    if not clan:
+        return False, "Bir klanda değilsin"
+    clan_id = int(clan["id"])
+    if str(clan["leader_username"]) == username:
+        return False, "Lider klanı terk edemez; önce liderliği devret"
+    db = connect(); c = db.cursor()
+    c.execute("DELETE FROM clan_members WHERE clan_id=%s AND username=%s", (clan_id, username))
+    db.commit(); c.close(); db.close()
+    return True, "Klandan ayrıldın"
+
+
+def kick_clan_member(actor_username, target_username):
+    clan = get_clan_for_username(actor_username)
+    if not clan:
+        return False, "Klan bulunamadı"
+    clan_id = int(clan["id"])
+    if target_username == str(clan["leader_username"]):
+        return False, "Lider çıkarılamaz"
+    db = connect(); c = db.cursor()
+    try:
+        if not _clan_has_permission(c, actor_username, clan_id, "kick"):
+            return False, "Yetkin yok"
+        c.execute(
+            "DELETE FROM clan_members WHERE clan_id=%s AND username=%s",
+            (clan_id, target_username)
+        )
+        changed = c.rowcount
+        db.commit()
+        return (changed > 0, "Üye çıkarıldı" if changed else "Üye bulunamadı")
+    finally:
+        c.close(); db.close()
+
+
+def set_clan_member_role(actor_username, target_username, role_name):
+    clan = get_clan_for_username(actor_username)
+    if not clan:
+        return False, "Klan bulunamadı"
+    clan_id = int(clan["id"])
+    db = connect(); c = db.cursor()
+    try:
+        if not _clan_has_permission(c, actor_username, clan_id, "roles"):
+            return False, "Yetkin yok"
+        c.execute(
+            "SELECT 1 FROM clan_roles WHERE clan_id=%s AND name=%s",
+            (clan_id, role_name)
+        )
+        if not c.fetchone():
+            return False, "Rütbe bulunamadı"
+        if target_username == str(clan["leader_username"]):
+            return False, "Lider rütbesi değiştirilemez"
+        c.execute(
+            "UPDATE clan_members SET role_name=%s WHERE clan_id=%s AND username=%s",
+            (role_name, clan_id, target_username)
+        )
+        db.commit()
+        return (c.rowcount > 0, "Klan rütbesi güncellendi")
+    finally:
+        c.close(); db.close()
+
+
+def set_clan_tax(actor_username, rate):
+    clan = get_clan_for_username(actor_username)
+    if not clan:
+        return False, "Klan bulunamadı"
+    clan_id = int(clan["id"])
+    rate = max(0.0, min(float(rate), 5.0))
+    db = connect(); c = db.cursor()
+    try:
+        if not _clan_has_permission(c, actor_username, clan_id, "tax"):
+            return False, "Yetkin yok"
+        c.execute("UPDATE clans SET tax_rate=%s WHERE id=%s", (rate, clan_id))
+        db.commit()
+        return True, "Klan vergisi güncellendi"
+    finally:
+        c.close(); db.close()
+
+
+def add_clan_message(username, message):
+    clan = get_clan_for_username(username)
+    if not clan:
+        return False, "Klan bulunamadı"
+    text = str(message).strip()
+    if not text:
+        return False, "Mesaj boş"
+    db = connect(); c = db.cursor()
+    c.execute(
+        "INSERT INTO clan_messages(clan_id,username,message) VALUES(%s,%s,%s)",
+        (int(clan["id"]), username, text[:500])
+    )
+    db.commit(); c.close(); db.close()
+    return True, "Mesaj gönderildi"
+
+
+def request_clan_diplomacy(actor_username, target_clan_id, relation):
+    relation = str(relation).upper()
+    if relation not in ("ALLIANCE", "NAP", "WAR"):
+        return False, "Geçersiz diplomasi"
+    clan = get_clan_for_username(actor_username)
+    if not clan:
+        return False, "Klan bulunamadı"
+    clan_id = int(clan["id"])
+    target_clan_id = int(target_clan_id)
+    if clan_id == target_clan_id:
+        return False, "Kendi klanın hedef olamaz"
+    db = connect(); c = db.cursor()
+    try:
+        permission = "war" if relation == "WAR" else "diplomacy"
+        if not _clan_has_permission(c, actor_username, clan_id, permission):
+            return False, "Yetkin yok"
+        status = "active" if relation == "WAR" else "pending"
+        c.execute("""
+            INSERT INTO clan_diplomacy(clan_id,target_clan_id,relation,status,requested_by)
+            VALUES(%s,%s,%s,%s,%s)
+            ON CONFLICT(clan_id,target_clan_id,relation)
+            DO UPDATE SET status=EXCLUDED.status,requested_by=EXCLUDED.requested_by,created_at=NOW()
+        """, (clan_id, target_clan_id, relation, status, actor_username))
+        if relation == "WAR":
+            c.execute("""
+                INSERT INTO clan_diplomacy(clan_id,target_clan_id,relation,status,requested_by)
+                VALUES(%s,%s,'WAR','active',%s)
+                ON CONFLICT(clan_id,target_clan_id,relation)
+                DO UPDATE SET status='active',requested_by=EXCLUDED.requested_by,created_at=NOW()
+            """, (target_clan_id, clan_id, actor_username))
+        db.commit()
+        return True, "Diplomasi isteği oluşturuldu"
+    finally:
+        c.close(); db.close()
+
+
+def respond_clan_diplomacy(actor_username, source_clan_id, relation, accept):
+    relation = str(relation).upper()
+    clan = get_clan_for_username(actor_username)
+    if not clan:
+        return False, "Klan bulunamadı"
+    target_clan_id = int(clan["id"])
+    db = connect(); c = db.cursor()
+    try:
+        if not _clan_has_permission(c, actor_username, target_clan_id, "diplomacy"):
+            return False, "Yetkin yok"
+        status = "active" if accept else "rejected"
+        c.execute("""
+            UPDATE clan_diplomacy SET status=%s
+            WHERE clan_id=%s AND target_clan_id=%s AND relation=%s AND status='pending'
+        """, (status, int(source_clan_id), target_clan_id, relation))
+        if c.rowcount <= 0:
+            return False, "İstek bulunamadı"
+        if accept:
+            c.execute("""
+                INSERT INTO clan_diplomacy(clan_id,target_clan_id,relation,status,requested_by)
+                VALUES(%s,%s,%s,'active',%s)
+                ON CONFLICT(clan_id,target_clan_id,relation)
+                DO UPDATE SET status='active'
+            """, (target_clan_id, int(source_clan_id), relation, actor_username))
+        db.commit()
+        return True, "Diplomasi güncellendi"
+    finally:
+        c.close(); db.close()
+
+
+def apply_daily_clan_tax(now_ts=None):
+    # DarkOrbit benzeri günlük klan vergisi: Bitcoin bakiyesinin %0-5'i.
+    # last_clan_tax_at sayesinde aynı oyuncudan günde bir kez alınır.
+    db = connect(); c = db.cursor()
+    try:
+        c.execute("""
+            SELECT p.username,p.bitcoin,p.last_clan_tax_at,cm.clan_id,cl.tax_rate
+            FROM players p
+            JOIN clan_members cm ON cm.username=p.username
+            JOIN clans cl ON cl.id=cm.clan_id
+            WHERE cl.tax_rate > 0
+              AND (p.last_clan_tax_at IS NULL OR p.last_clan_tax_at < NOW() - INTERVAL '24 hours')
+        """)
+        rows = c.fetchall()
+        for r in rows:
+            amount = int(max(0, int(r["bitcoin"] or 0)) * float(r["tax_rate"] or 0) / 100.0)
+            if amount <= 0:
+                c.execute("UPDATE players SET last_clan_tax_at=NOW() WHERE username=%s", (r["username"],))
+                continue
+            c.execute("UPDATE players SET bitcoin=GREATEST(0,bitcoin-%s), last_clan_tax_at=NOW() WHERE username=%s", (amount, r["username"]))
+            c.execute("UPDATE clans SET treasury_bitcoin=treasury_bitcoin+%s WHERE id=%s", (amount, int(r["clan_id"])))
+        db.commit()
+    finally:
+        c.close(); db.close()
