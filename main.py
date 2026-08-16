@@ -50,6 +50,7 @@ def player_to_dict(player):
         "max_shield": float(player.get("max_shield", 0)),
         "alive": bool(player.get("alive", True)),
         "session_active": bool(player.get("session_active", False)),
+        "rank": get_player_ranking(player["username"]),
         "owned_ships": assets["owned_ships"],
         "inventory": assets["inventory"],
         "droid_types": assets["droid_types"]
@@ -522,3 +523,42 @@ def start_mmo_world_loop():
             name="NovaGateWorldTick",
             daemon=True
         ).start()
+
+
+# ============================================================
+# NOVAGATE RANKING V1 API
+# ============================================================
+
+@app.get("/ranking/player/{username}")
+def ranking_player(username: str):
+    data = get_player_ranking(username)
+    if not data:
+        return {"basarili": False, "mesaj": "Oyuncu bulunamadı"}
+    return {"basarili": True, "ranking": data}
+
+
+@app.get("/ranking/leaderboard")
+def ranking_leaderboard(limit: int = 100, company: str = ""):
+    return {
+        "basarili": True,
+        "company": company.strip().upper(),
+        "rows": get_ranking_leaderboard(limit, company)
+    }
+
+
+@app.post("/ranking/stat")
+def ranking_stat(username: str, stat: str, amount: int = 1):
+    ok = increment_rank_stat(username, stat, amount)
+    if not ok:
+        return {"basarili": False, "mesaj": "Oyuncu veya istatistik bulunamadı"}
+    return {"basarili": True, "ranking": get_player_ranking(username)}
+
+
+@app.post("/admin/rank")
+def admin_rank(username: str, enabled: bool):
+    # Bu endpoint A rozetini manuel olarak açıp kapatır.
+    # Normal oyuncu puan/formül yoluyla admin olamaz.
+    ok = set_admin_rank(username, enabled)
+    if not ok:
+        return {"basarili": False, "mesaj": "Oyuncu bulunamadı"}
+    return {"basarili": True, "ranking": get_player_ranking(username)}
