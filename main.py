@@ -51,6 +51,7 @@ def player_to_dict(player):
         "alive": bool(player.get("alive", True)),
         "session_active": bool(player.get("session_active", False)),
         "rank": get_player_ranking(player["username"]),
+        "clan_tag": get_clan_tag_for_username(player["username"]),
         "owned_ships": assets["owned_ships"],
         "inventory": assets["inventory"],
         "droid_types": assets["droid_types"]
@@ -378,13 +379,16 @@ def world_presence(body: PresenceBody):
 def world_players(map_name: str, username: str = ""):
     now = time.time()
     rows = get_online_players(map_name, now, username)
-    rank_map = get_rank_snapshot_for_usernames([r["username"] for r in rows])
+    usernames = [r["username"] for r in rows]
+    rank_map = get_rank_snapshot_for_usernames(usernames)
+    clan_map = get_clan_tags_for_usernames(usernames)
     players = []
     for r in rows:
         item = dict(r)
         rank_data = rank_map.get(str(r["username"]), {})
         item["rank_key"] = rank_data.get("rank_key", "private")
         item["rank_title"] = rank_data.get("rank_title", "Er")
+        item["clan_tag"] = clan_map.get(str(r["username"]), "")
         players.append(item)
     return {"server_time": now, "players": players}
 
@@ -570,3 +574,145 @@ def admin_rank(username: str, enabled: bool):
     if not ok:
         return {"basarili": False, "mesaj": "Oyuncu bulunamadı"}
     return {"basarili": True, "ranking": get_player_ranking(username)}
+
+
+# ============================================================
+# NOVAGATE CLAN SYSTEM V1 API
+# ============================================================
+
+from pydantic import BaseModel
+
+
+class ClanCreateBody(BaseModel):
+    username: str
+    name: str
+    tag: str
+    description: str = ""
+
+
+class ClanApplyBody(BaseModel):
+    username: str
+    clan_id: int
+    message: str = ""
+
+
+class ClanDecisionBody(BaseModel):
+    username: str
+    application_id: int
+    accept: bool
+
+
+class ClanRoleBody(BaseModel):
+    username: str
+    target_username: str
+    role_name: str
+
+
+class ClanKickBody(BaseModel):
+    username: str
+    target_username: str
+
+
+class ClanTaxBody(BaseModel):
+    username: str
+    tax_rate: float
+
+
+class ClanMessageBody(BaseModel):
+    username: str
+    message: str
+
+
+class ClanDiplomacyBody(BaseModel):
+    username: str
+    target_clan_id: int
+    relation: str
+
+
+class ClanDiplomacyResponseBody(BaseModel):
+    username: str
+    source_clan_id: int
+    relation: str
+    accept: bool
+
+
+@app.post("/clan/create")
+def clan_create(body: ClanCreateBody):
+    ok, message, clan_id = create_clan(body.username, body.name, body.tag, body.description)
+    return {"basarili": ok, "mesaj": message, "clan_id": clan_id}
+
+
+@app.get("/clan/me/{username}")
+def clan_me(username: str):
+    membership = get_clan_for_username(username)
+    if not membership:
+        return {"basarili": True, "in_clan": False, "clan_tag": ""}
+    data = get_clan_full(int(membership["id"]), username)
+    return {"basarili": True, "in_clan": True, "clan_tag": str(membership["tag"]), "data": data}
+
+
+@app.get("/clan/search")
+def clan_search(q: str = "", limit: int = 30):
+    return {"basarili": True, "rows": [dict(r) for r in search_clans(q, limit)]}
+
+
+@app.get("/clan/{clan_id}")
+def clan_detail(clan_id: int, viewer: str = ""):
+    data = get_clan_full(clan_id, viewer)
+    if not data:
+        return {"basarili": False, "mesaj": "Klan bulunamadı"}
+    return {"basarili": True, "data": data}
+
+
+@app.post("/clan/apply")
+def clan_apply(body: ClanApplyBody):
+    ok, msg = apply_to_clan(body.username, body.clan_id, body.message)
+    return {"basarili": ok, "mesaj": msg}
+
+
+@app.post("/clan/application/decide")
+def clan_application_decide(body: ClanDecisionBody):
+    ok, msg = decide_clan_application(body.username, body.application_id, body.accept)
+    return {"basarili": ok, "mesaj": msg}
+
+
+@app.post("/clan/leave")
+def clan_leave(username: str):
+    ok, msg = leave_clan(username)
+    return {"basarili": ok, "mesaj": msg}
+
+
+@app.post("/clan/kick")
+def clan_kick(body: ClanKickBody):
+    ok, msg = kick_clan_member(body.username, body.target_username)
+    return {"basarili": ok, "mesaj": msg}
+
+
+@app.post("/clan/member/role")
+def clan_member_role(body: ClanRoleBody):
+    ok, msg = set_clan_member_role(body.username, body.target_username, body.role_name)
+    return {"basarili": ok, "mesaj": msg}
+
+
+@app.post("/clan/tax")
+def clan_tax(body: ClanTaxBody):
+    ok, msg = set_clan_tax(body.username, body.tax_rate)
+    return {"basarili": ok, "mesaj": msg}
+
+
+@app.post("/clan/message")
+def clan_message(body: ClanMessageBody):
+    ok, msg = add_clan_message(body.username, body.message)
+    return {"basarili": ok, "mesaj": msg}
+
+
+@app.post("/clan/diplomacy/request")
+def clan_diplomacy_request(body: ClanDiplomacyBody):
+    ok, msg = request_clan_diplomacy(body.username, body.target_clan_id, body.relation)
+    return {"basarili": ok, "mesaj": msg}
+
+
+@app.post("/clan/diplomacy/respond")
+def clan_diplomacy_respond(body: ClanDiplomacyResponseBody):
+    ok, msg = respond_clan_diplomacy(body.username, body.source_clan_id, body.relation, body.accept)
+    return {"basarili": ok, "mesaj": msg}
