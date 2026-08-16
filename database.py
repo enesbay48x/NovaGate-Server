@@ -5,7 +5,9 @@ DB_NAME = "novagate.db"
 
 def connect():
     db = sqlite3.connect(DB_NAME, timeout=30)
+    db.row_factory = sqlite3.Row
     db.execute("PRAGMA journal_mode=WAL")
+    db.execute("PRAGMA busy_timeout=30000")
     return db
 
 
@@ -55,7 +57,7 @@ def create_tables():
     db.close()
 
 
-def create_player(username, password, nickname, company):
+def create_player(username, password, nickname, company=""):
     db = connect()
     cursor = db.cursor()
 
@@ -63,7 +65,7 @@ def create_player(username, password, nickname, company):
         cursor.execute("""
         INSERT INTO players(username, password, nickname, company, map)
         VALUES(?,?,?,?,?)
-        """, (username, password, nickname, company, ""))
+        """, (username, password, nickname, company.strip().upper(), ""))
 
         player_id = cursor.lastrowid
 
@@ -88,62 +90,68 @@ def login_player(username, password):
     SELECT * FROM players
     WHERE username=? AND password=?
     """, (username, password))
-    player = cursor.fetchone()
+    row = cursor.fetchone()
     db.close()
-    return player
+    return row
 
 
 def get_player(player_id):
     db = connect()
     cursor = db.cursor()
     cursor.execute("SELECT * FROM players WHERE id=?", (player_id,))
-    player = cursor.fetchone()
+    row = cursor.fetchone()
     db.close()
-    return player
+    return row
 
 
 def get_player_by_username(username):
     db = connect()
     cursor = db.cursor()
     cursor.execute("SELECT * FROM players WHERE username=?", (username,))
-    player = cursor.fetchone()
+    row = cursor.fetchone()
     db.close()
-    return player
+    return row
 
 
-def change_nickname(player_id, new_nickname):
-    db = connect()
-    cursor = db.cursor()
-    cursor.execute("""
-    UPDATE players SET nickname=? WHERE id=?
-    """, (new_nickname, player_id))
-    db.commit()
-    db.close()
-
-
-def set_player_company(player_id, company):
+def set_player_company_by_username(username, company):
     company = company.strip().upper()
 
     if company == "EIC":
         start_map = "2-1"
     elif company == "VRU":
         start_map = "3-1"
-    else:
-        company = "MMO"
+    elif company == "MMO":
         start_map = "1-1"
+    else:
+        return False, "", ""
 
+    db = connect()
+    cursor = db.cursor()
+
+    cursor.execute("""
+    UPDATE players
+    SET company=?, map=?, pos_x=0, pos_y=0
+    WHERE username=?
+    """, (company, start_map, username))
+
+    changed = cursor.rowcount
+    db.commit()
+    db.close()
+
+    return changed > 0, company, start_map
+
+
+def change_nickname(player_id, new_nickname):
     db = connect()
     cursor = db.cursor()
     cursor.execute("""
     UPDATE players
-    SET company=?, map=?, pos_x=19, pos_y=-11
+    SET nickname=?
     WHERE id=?
-    """, (company, start_map, player_id))
+    """, (new_nickname, player_id))
     db.commit()
-    changed = cursor.rowcount
     db.close()
 
-    return changed > 0, start_map
 
 def add_player_plt_by_username(username, amount):
     db = connect()
@@ -152,13 +160,11 @@ def add_player_plt_by_username(username, amount):
     cursor.execute("""
     UPDATE players
     SET plt = plt + ?
-    WHERE username = ?
+    WHERE username=?
     """, (amount, username))
 
+    changed = cursor.rowcount
     db.commit()
-
-    updated = cursor.rowcount > 0
-
     db.close()
 
-    return updated
+    return changed > 0
