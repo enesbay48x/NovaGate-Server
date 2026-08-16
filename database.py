@@ -38,6 +38,23 @@ def create_tables():
     )
     """)
 
+    # NovaGate Ranking V1 - mevcut hesapları silmeden yeni istatistik alanları.
+    rank_columns = [
+        ("npc_kills", "BIGINT DEFAULT 0"),
+        ("player_kills", "BIGINT DEFAULT 0"),
+        ("friendly_kills", "BIGINT DEFAULT 0"),
+        ("deaths", "BIGINT DEFAULT 0"),
+        ("radiation_deaths", "BIGINT DEFAULT 0"),
+        ("starter_ship_kills", "BIGINT DEFAULT 0"),
+        ("missions_completed", "BIGINT DEFAULT 0"),
+        ("registered_at", "TIMESTAMPTZ DEFAULT NOW()"),
+        ("is_admin", "BOOLEAN DEFAULT FALSE")
+    ]
+    for column_name, column_type in rank_columns:
+        cursor.execute(
+            "ALTER TABLE players ADD COLUMN IF NOT EXISTS %s %s" % (column_name, column_type)
+        )
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS inventory(
         id SERIAL PRIMARY KEY,
@@ -1088,3 +1105,256 @@ def world_tick_once(now_ts):
     finally:
         c.close()
         db.close()
+
+
+# ============================================================
+# NOVAGATE RANKING V1
+# DarkOrbit-style dynamic company ranking.
+# ============================================================
+
+RANK_ORDER = [
+    ("private", "Er"),
+    ("sergeant", "Çavuş"),
+    ("lieutenant", "Teğmen"),
+    ("captain", "Yüzbaşı"),
+    ("major", "Binbaşı"),
+    ("colonel", "Albay"),
+    ("gen-col", "Kurmay Albay"),
+    ("gen-maj", "Tümgeneral"),
+    ("general", "General"),
+    ("marshal", "Mareşal"),
+]
+
+# Üstten aşağı kümülatif dilimler. Küçük oyuncu sayılarında da rütbe sistemi
+# çalışsın diye kontenjan hesabında minimum 1 kişi korunur.
+RANK_TOP_PERCENT = {
+    "marshal": 0.01,
+    "general": 0.05,
+    "gen-maj": 0.20,
+    "gen-col": 0.75,
+    "colonel": 2.00,
+    "major": 5.00,
+    "captain": 12.00,
+    "lieutenant": 25.00,
+    "sergeant": 45.00,
+    "private": 100.00,
+}
+
+SHIP_RANK_VALUE = {
+    "Ship10": 1, "Başlangıç Gemisi": 1,
+    "Ship20": 2, "Ship40": 3, "Ship50": 4, "Ship60": 5,
+    "Ship70": 6, "Ship80": 7, "Ship100": 8, "Ship106": 10,
+}
+
+
+def _rank_points_from_row(row):
+    if not row:
+        return 0.0
+    exp = float(row.get("exp", 0) or 0)
+    honor = float(row.get("honor", 0) or 0)
+    level = int(row.get("level", 1) or 1)
+    npc_kills = int(row.get("npc_kills", 0) or 0)
+    player_kills = int(row.get("player_kills", 0) or 0)
+    friendly_kills = int(row.get("friendly_kills", 0) or 0)
+    deaths = int(row.get("deaths", 0) or 0)
+    radiation_deaths = int(row.get("radiation_deaths", 0) or 0)
+    starter_ship_kills = int(row.get("starter_ship_kills", 0) or 0)
+    missions_completed = int(row.get("missions_completed", 0) or 0)
+    ship_value = SHIP_RANK_VALUE.get(str(row.get("ship", "Ship10")), 1)
+
+    registered_at = row.get("registered_at")
+    days_registered = 0
+    if registered_at is not None:
+        try:
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc)
+            dt = registered_at
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            days_registered = max(0, (now - dt).days)
+        except Exception:
+            days_registered = 0
+
+    # DarkOrbit formülünün NovaGate'teki mevcut sayaçlara uyarlanmış hali.
+    points = (
+        exp / 100000.0
+        + honor / 100.0
+        + player_kills * 3.0
+        + level * 100.0
+        + days_registered * 6.0
+        + ship_value * 1000.0
+        + npc_kills / 2.0
+        + missions_completed * 100.0
+        - friendly_kills * 100.0
+        - deaths * 4.0
+        - radiation_deaths * 8.0
+        - starter_ship_kills * 2.0
+    )
+    return max(0.0, points)
+
+
+def _normal_rank_for_position(position, company_count):
+    if company_count <= 0:
+        return ("private", "Er")
+    percentile = (float(position) / float(company_count)) * 100.0
+    for key in ["marshal","general","gen-maj","gen-col","colonel","major","captain","lieutenant","sergeant","private"]:
+        threshold = RANK_TOP_PERCENT[key]
+        quota = max(1, int((company_count * threshold) / 100.0 + 0.999999))
+        if position <= quota:
+            for rk, title in RANK_ORDER:
+                if rk == key:
+                    return (rk, title)
+    return ("private", "Er")
+
+
+def get_player_ranking(username):
+    db = connect()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM players WHERE username=%s", (username,))
+    player = cursor.fetchone()
+    if not player:
+        cursor.close()
+        db.close()
+        return None
+
+    company = str(player.get("company", "") or "")
+    cursor.execute("SELECT * FROM players ORDER BY id")
+    all_players = cursor.fetchall()
+    cursor.close()
+    db.close()
+
+    scored = []
+    for p in all_players:
+        scored.append((p, _rank_points_from_row(p)))
+    scored.sort(key=lambda item: (-item[1], int(item[0]["id"])))
+
+    global_position = 1
+    for i, (p, _) in enumerate(scored, start=1):
+        if p["username"] == username:
+            global_position = i
+            break
+
+    company_scored = [(p, pts) for p, pts in scored if str(p.get("company", "") or "") == company]
+    company_position = 1
+    for i, (p, _) in enumerate(company_scored, start=1):
+        if p["username"] == username:
+            company_position = i
+            break
+
+    points = _rank_points_from_row(player)
+
+    # A rozeti sadece is_admin=true hesapta.
+    if bool(player.get("is_admin", False)):
+        rank_key, rank_title = "admin", "Admin"
+    # Negatif şeref normal rütbe yerine traitor gösterir.
+    elif int(player.get("honor", 0) or 0) < 0:
+        rank_key, rank_title = "traitor", "Vatan Haini"
+    else:
+        rank_key, rank_title = _normal_rank_for_position(company_position, len(company_scored))
+
+    next_rank_key = ""
+    next_rank_title = ""
+    next_rank_points = None
+    normal_keys = [x[0] for x in RANK_ORDER]
+    if rank_key in normal_keys:
+        idx = normal_keys.index(rank_key)
+        if idx < len(normal_keys) - 1:
+            next_rank_key, next_rank_title = RANK_ORDER[idx + 1]
+            # Bir üst rütbedeki en düşük oyuncunun mevcut puanını hedef olarak göster.
+            candidates = []
+            for pos, (p, pts) in enumerate(company_scored, start=1):
+                rk, _ = _normal_rank_for_position(pos, len(company_scored))
+                if rk == next_rank_key:
+                    candidates.append(pts)
+            if candidates:
+                next_rank_points = min(candidates)
+
+    return {
+        "username": player["username"],
+        "nickname": player.get("nickname", ""),
+        "company": company,
+        "rank_key": rank_key,
+        "rank_title": rank_title,
+        "rank_points": round(points, 2),
+        "global_position": global_position,
+        "global_count": len(scored),
+        "company_position": company_position,
+        "company_count": len(company_scored),
+        "next_rank_key": next_rank_key,
+        "next_rank_title": next_rank_title,
+        "next_rank_points": next_rank_points,
+        "npc_kills": int(player.get("npc_kills", 0) or 0),
+        "player_kills": int(player.get("player_kills", 0) or 0),
+        "friendly_kills": int(player.get("friendly_kills", 0) or 0),
+        "deaths": int(player.get("deaths", 0) or 0),
+        "missions_completed": int(player.get("missions_completed", 0) or 0),
+        "exp": int(player.get("exp", 0) or 0),
+        "honor": int(player.get("honor", 0) or 0),
+        "is_admin": bool(player.get("is_admin", False)),
+    }
+
+
+def increment_rank_stat(username, stat_name, amount=1):
+    allowed = {
+        "npc_kills", "player_kills", "friendly_kills", "deaths",
+        "radiation_deaths", "starter_ship_kills", "missions_completed"
+    }
+    if stat_name not in allowed:
+        return False
+    amount = max(0, int(amount))
+    db = connect()
+    cursor = db.cursor()
+    cursor.execute(
+        "UPDATE players SET " + stat_name + " = " + stat_name + " + %s WHERE username=%s",
+        (amount, username)
+    )
+    changed = cursor.rowcount
+    db.commit()
+    cursor.close()
+    db.close()
+    return changed > 0
+
+
+def set_admin_rank(username, enabled):
+    db = connect()
+    cursor = db.cursor()
+    cursor.execute("UPDATE players SET is_admin=%s WHERE username=%s", (bool(enabled), username))
+    changed = cursor.rowcount
+    db.commit()
+    cursor.close()
+    db.close()
+    return changed > 0
+
+
+def get_ranking_leaderboard(limit=100, company=""):
+    db = connect()
+    cursor = db.cursor()
+    if company:
+        cursor.execute("SELECT * FROM players WHERE company=%s ORDER BY id", (company.strip().upper(),))
+    else:
+        cursor.execute("SELECT * FROM players ORDER BY id")
+    rows = cursor.fetchall()
+    cursor.close()
+    db.close()
+
+    scored = [(p, _rank_points_from_row(p)) for p in rows]
+    scored.sort(key=lambda item: (-item[1], int(item[0]["id"])))
+    result = []
+    count = len(scored)
+    for pos, (p, pts) in enumerate(scored[:max(1, min(int(limit), 500))], start=1):
+        if bool(p.get("is_admin", False)):
+            rk, title = "admin", "Admin"
+        elif int(p.get("honor", 0) or 0) < 0:
+            rk, title = "traitor", "Vatan Haini"
+        else:
+            rk, title = _normal_rank_for_position(pos, count)
+        result.append({
+            "position": pos,
+            "username": p["username"],
+            "nickname": p.get("nickname", ""),
+            "company": p.get("company", ""),
+            "rank_key": rk,
+            "rank_title": title,
+            "rank_points": round(pts, 2)
+        })
+    return result
