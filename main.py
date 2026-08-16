@@ -6,7 +6,9 @@ app = FastAPI(
     version="1.1.0"
 )
 
-create_tables()
+# PRODUCTION: Schema zaten mevcut. Import sırasında DDL çalıştırmak Render port açılışını kilitleyebildiği için kapalı.
+# Yeni schema değişikliği gerektiğinde migration ayrı çalıştırılmalı.
+# create_tables()
 
 SHIP_CATALOG = {'Ship10': {'currency': 'FREE', 'price': 0}, 'Ship20': {'currency': 'BTC', 'price': 90000}, 'Ship40': {'currency': 'BTC', 'price': 270000}, 'Ship50': {'currency': 'BTC', 'price': 900000}, 'Ship60': {'currency': 'BTC', 'price': 2500000}, 'Ship70': {'currency': 'PLT', 'price': 90000}, 'Ship80': {'currency': 'PLT', 'price': 250000}, 'Ship100': {'currency': 'PLT', 'price': 250000}, 'Ship106': {'currency': 'PLT', 'price': 330000}}
 
@@ -267,7 +269,8 @@ import threading
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-ensure_online_world_tables()
+# PRODUCTION: Online-world tabloları mevcut. Import sırasında ALTER/CREATE çalıştırma.
+# ensure_online_world_tables()
 
 
 class PresenceBody(BaseModel):
