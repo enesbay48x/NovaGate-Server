@@ -251,3 +251,66 @@ def market_buy(username: str, kind: str, item_id: str):
         "inventory": assets["inventory"],
         "droid_types": assets["droid_types"]
     }
+
+# === NovaGate persistent online world v1 ===
+import time
+from pydantic import BaseModel
+
+ensure_online_world_tables()
+
+class PresenceBody(BaseModel):
+    username: str
+    map: str
+    x: float
+    y: float
+
+class EffectBody(BaseModel):
+    username: str
+    key: str
+    cooldown_seconds: float
+    active_seconds: float = 0.0
+
+class NPCBody(BaseModel):
+    npc_id: str
+    map: str
+    npc_type: str
+    x: float
+    y: float
+    health: float
+    shield: float = 0.0
+    max_health: float
+    move_speed: float
+    passive: bool = False
+    alive: bool = True
+    respawn_at: float = 0.0
+
+@app.post('/world/presence')
+def world_presence(body: PresenceBody):
+    now=time.time(); ok=update_player_presence(body.username,body.map,body.x,body.y,now)
+    return {'basarili':ok,'server_time':now}
+
+@app.get('/world/players/{map_name}')
+def world_players(map_name: str, username: str = ''):
+    now=time.time(); rows=get_online_players(map_name,now,username)
+    return {'server_time':now,'players':[dict(r) for r in rows]}
+
+@app.get('/effects/{username}')
+def effects_get(username: str):
+    now=time.time(); row=get_effects(username)
+    return {'server_time':now,'effects':dict(row) if row else {}}
+
+@app.post('/effects/start')
+def effects_start(body: EffectBody):
+    now=time.time(); cd=now+max(0.0,body.cooldown_seconds); active=now+max(0.0,body.active_seconds)
+    ok=set_effect(body.username,body.key,cd,active,now)
+    return {'basarili':ok,'server_time':now,'cooldown_end':cd,'active_end':active}
+
+@app.get('/world/npcs/{map_name}')
+def world_npcs(map_name: str):
+    now=time.time(); rows=get_npc_world(map_name)
+    return {'server_time':now,'npcs':[dict(r) for r in rows]}
+
+@app.post('/world/npc')
+def world_npc_update(body: NPCBody):
+    now=time.time(); upsert_npc_world(body.npc_id,body.map,body.npc_type,body.x,body.y,body.health,body.shield,body.max_health,body.move_speed,body.passive,body.alive,body.respawn_at,now)
+    return {'basarili':True,'server_time':now}
