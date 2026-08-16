@@ -1,14 +1,19 @@
-import sqlite3
+import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
-DB_NAME = "novagate.db"
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL environment variable bulunamadı.")
 
 
 def connect():
-    db = sqlite3.connect(DB_NAME, timeout=30)
-    db.row_factory = sqlite3.Row
-    db.execute("PRAGMA journal_mode=WAL")
-    db.execute("PRAGMA busy_timeout=30000")
-    return db
+    return psycopg2.connect(
+        DATABASE_URL,
+        cursor_factory=RealDictCursor
+    )
 
 
 def create_tables():
@@ -17,16 +22,16 @@ def create_tables():
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS players(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         nickname TEXT,
         company TEXT DEFAULT '',
         level INTEGER DEFAULT 1,
-        exp INTEGER DEFAULT 0,
-        honor INTEGER DEFAULT 0,
-        bitcoin INTEGER DEFAULT 0,
-        plt INTEGER DEFAULT 0,
+        exp BIGINT DEFAULT 0,
+        honor BIGINT DEFAULT 0,
+        bitcoin BIGINT DEFAULT 0,
+        plt BIGINT DEFAULT 0,
         ship TEXT DEFAULT 'Başlangıç Gemisi',
         map TEXT DEFAULT '',
         pos_x INTEGER DEFAULT 0,
@@ -36,8 +41,8 @@ def create_tables():
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS inventory(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        player_id INTEGER,
+        id SERIAL PRIMARY KEY,
+        player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
         item_type TEXT,
         item_name TEXT,
         amount INTEGER DEFAULT 1
@@ -46,14 +51,15 @@ def create_tables():
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS ships(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        player_id INTEGER,
+        id SERIAL PRIMARY KEY,
+        player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
         ship_name TEXT,
         active INTEGER DEFAULT 0
     )
     """)
 
     db.commit()
+    cursor.close()
     db.close()
 
 
@@ -64,33 +70,53 @@ def create_player(username, password, nickname, company=""):
     try:
         cursor.execute("""
         INSERT INTO players(username, password, nickname, company, map)
-        VALUES(?,?,?,?,?)
-        """, (username, password, nickname, company.strip().upper(), ""))
+        VALUES(%s,%s,%s,%s,%s)
+        RETURNING id
+        """, (
+            username,
+            password,
+            nickname,
+            company.strip().upper(),
+            ""
+        ))
 
-        player_id = cursor.lastrowid
+        row = cursor.fetchone()
+        player_id = row["id"]
 
         cursor.execute("""
         INSERT INTO ships(player_id, ship_name, active)
-        VALUES(?,?,?)
-        """, (player_id, "Başlangıç Gemisi", 1))
+        VALUES(%s,%s,%s)
+        """, (
+            player_id,
+            "Başlangıç Gemisi",
+            1
+        ))
 
         db.commit()
         return player_id
-    except sqlite3.IntegrityError:
+
+    except psycopg2.IntegrityError:
         db.rollback()
         return None
+
     finally:
+        cursor.close()
         db.close()
 
 
 def login_player(username, password):
     db = connect()
     cursor = db.cursor()
+
     cursor.execute("""
-    SELECT * FROM players
-    WHERE username=? AND password=?
+    SELECT *
+    FROM players
+    WHERE username=%s AND password=%s
     """, (username, password))
+
     row = cursor.fetchone()
+
+    cursor.close()
     db.close()
     return row
 
@@ -98,8 +124,16 @@ def login_player(username, password):
 def get_player(player_id):
     db = connect()
     cursor = db.cursor()
-    cursor.execute("SELECT * FROM players WHERE id=?", (player_id,))
+
+    cursor.execute("""
+    SELECT *
+    FROM players
+    WHERE id=%s
+    """, (player_id,))
+
     row = cursor.fetchone()
+
+    cursor.close()
     db.close()
     return row
 
@@ -107,8 +141,16 @@ def get_player(player_id):
 def get_player_by_username(username):
     db = connect()
     cursor = db.cursor()
-    cursor.execute("SELECT * FROM players WHERE username=?", (username,))
+
+    cursor.execute("""
+    SELECT *
+    FROM players
+    WHERE username=%s
+    """, (username,))
+
     row = cursor.fetchone()
+
+    cursor.close()
     db.close()
     return row
 
@@ -130,12 +172,21 @@ def set_player_company_by_username(username, company):
 
     cursor.execute("""
     UPDATE players
-    SET company=?, map=?, pos_x=0, pos_y=0
-    WHERE username=?
-    """, (company, start_map, username))
+    SET company=%s,
+        map=%s,
+        pos_x=0,
+        pos_y=0
+    WHERE username=%s
+    """, (
+        company,
+        start_map,
+        username
+    ))
 
     changed = cursor.rowcount
     db.commit()
+
+    cursor.close()
     db.close()
 
     return changed > 0, company, start_map
@@ -144,13 +195,27 @@ def set_player_company_by_username(username, company):
 def change_nickname(player_id, new_nickname):
     db = connect()
     cursor = db.cursor()
-    cursor.execute("""
-    UPDATE players
-    SET nickname=?
-    WHERE id=?
-    """, (new_nickname, player_id))
-    db.commit()
-    db.close()
+
+    try:
+        cursor.execute("""
+        UPDATE players
+        SET nickname=%s
+        WHERE id=%s
+        """, (
+            new_nickname,
+            player_id
+        ))
+
+        db.commit()
+        return cursor.rowcount > 0
+
+    except psycopg2.IntegrityError:
+        db.rollback()
+        return False
+
+    finally:
+        cursor.close()
+        db.close()
 
 
 def add_player_plt_by_username(username, amount):
@@ -159,31 +224,41 @@ def add_player_plt_by_username(username, amount):
 
     cursor.execute("""
     UPDATE players
-    SET plt = plt + ?
-    WHERE username=?
-    """, (amount, username))
+    SET plt = plt + %s
+    WHERE username=%s
+    """, (
+        amount,
+        username
+    ))
 
     changed = cursor.rowcount
     db.commit()
+
+    cursor.close()
     db.close()
 
     return changed > 0
 
 
-def adjust_player_economy(username, bitcoin_delta=0, plt_delta=0, xp_delta=0, honor_delta=0):
+def adjust_player_economy(
+    username,
+    bitcoin_delta=0,
+    plt_delta=0,
+    xp_delta=0,
+    honor_delta=0
+):
     db = connect()
     cursor = db.cursor()
 
-    # PLT ve Bitcoin bakiyesi negatif olamaz.
     cursor.execute("""
     UPDATE players
-    SET bitcoin = bitcoin + ?,
-        plt = plt + ?,
-        exp = exp + ?,
-        honor = honor + ?
-    WHERE username = ?
-      AND bitcoin + ? >= 0
-      AND plt + ? >= 0
+    SET bitcoin = bitcoin + %s,
+        plt = plt + %s,
+        exp = exp + %s,
+        honor = honor + %s
+    WHERE username = %s
+      AND bitcoin + %s >= 0
+      AND plt + %s >= 0
     """, (
         bitcoin_delta,
         plt_delta,
@@ -196,6 +271,8 @@ def adjust_player_economy(username, bitcoin_delta=0, plt_delta=0, xp_delta=0, ho
 
     changed = cursor.rowcount
     db.commit()
+
+    cursor.close()
     db.close()
 
     return changed > 0
