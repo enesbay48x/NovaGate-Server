@@ -128,3 +128,35 @@ def change_player_nickname(player_id: int, new_nickname: str):
         "basarili": True,
         "mesaj": "Nick değiştirildi"
     }
+@app.post("/admin/add_plt")
+def admin_add_plt(
+    player_id: int,
+    amount: int
+):
+
+    if amount <= 0:
+        return {
+            "basarili": False,
+            "mesaj": "PLT miktarı 0'dan büyük olmalı"
+        }
+
+    success = add_player_plt(
+        player_id,
+        amount
+    )
+
+    if not success:
+        return {
+            "basarili": False,
+            "mesaj": "Oyuncu bulunamadı"
+        }
+
+    player = get_player(player_id)
+
+    return {
+        "basarili": True,
+        "oyuncu_id": player_id,
+        "eklenen_plt": amount,
+        "toplam_plt": player[9],
+        "mesaj": "PLT başarıyla eklendi"
+    }
