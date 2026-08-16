@@ -6,6 +6,27 @@ app = FastAPI()
 create_tables()
 
 
+def player_to_dict(player):
+    if not player:
+        return None
+
+    return {
+        "id": player["id"],
+        "username": player["username"],
+        "nickname": player["nickname"],
+        "company": player["company"] or "",
+        "level": player["level"],
+        "exp": player["exp"],
+        "honor": player["honor"],
+        "bitcoin": player["bitcoin"],
+        "plt": player["plt"],
+        "ship": player["ship"],
+        "map": player["map"] or "",
+        "x": player["pos_x"],
+        "y": player["pos_y"]
+    }
+
+
 @app.get("/")
 def home():
     return {
@@ -21,9 +42,7 @@ def register(
     nickname: str,
     company: str = ""
 ):
-    existing_user = get_player_by_username(username)
-
-    if existing_user:
+    if get_player_by_username(username):
         return {
             "basarili": False,
             "mesaj": "Bu kullanıcı adı zaten kullanılıyor"
@@ -53,47 +72,39 @@ def register(
 def login(username: str, password: str):
     player = login_player(username, password)
 
-    if player:
-        return {
-            "basarili": True,
-            "oyuncu": {
-                "id": player[0],
-                "username": player[1],
-                "nickname": player[3],
-                "company": player[4],
-                "level": player[5],
-                "exp": player[6],
-                "honor": player[7],
-                "bitcoin": player[8],
-                "plt": player[9],
-                "ship": player[10],
-                "map": player[11],
-                "x": player[12],
-                "y": player[13]
-            }
-        }
-
-    return {
-        "basarili": False,
-        "mesaj": "Kullanıcı adı veya şifre yanlış"
-    }
-
-
-@app.post("/set_company")
-def set_company(player_id: int, company: str):
-    success, start_map = set_player_company(player_id, company)
-
-    if not success:
+    if not player:
         return {
             "basarili": False,
-            "mesaj": "Oyuncu bulunamadı"
+            "mesaj": "Kullanıcı adı veya şifre yanlış"
         }
 
     return {
         "basarili": True,
-        "company": company.upper(),
-        "map": start_map,
-        "mesaj": "Şirket kaydedildi"
+        "oyuncu": player_to_dict(player)
+    }
+
+
+@app.post("/set_company")
+def set_company(username: str, company: str):
+    success, saved_company, start_map = set_player_company_by_username(
+        username,
+        company
+    )
+
+    if not success:
+        return {
+            "basarili": False,
+            "mesaj": "Oyuncu bulunamadı veya şirket geçersiz"
+        }
+
+    # Kaydın gerçekten veritabanına yazıldığını tekrar okuyup doğrula.
+    player = get_player_by_username(username)
+
+    return {
+        "basarili": True,
+        "company": player["company"],
+        "map": player["map"],
+        "mesaj": "Şirket kalıcı olarak kaydedildi"
     }
 
 
@@ -101,49 +112,45 @@ def set_company(player_id: int, company: str):
 def player_info(player_id: int):
     player = get_player(player_id)
 
-    if player:
+    if not player:
         return {
-            "id": player[0],
-            "username": player[1],
-            "nickname": player[3],
-            "company": player[4],
-            "level": player[5],
-            "exp": player[6],
-            "honor": player[7],
-            "bitcoin": player[8],
-            "plt": player[9],
-            "ship": player[10],
-            "map": player[11],
-            "x": player[12],
-            "y": player[13]
+            "hata": "Oyuncu bulunamadı"
         }
 
-    return {"hata": "Oyuncu bulunamadı"}
+    return player_to_dict(player)
+
+
+@app.get("/player_by_username/{username}")
+def player_info_by_username(username: str):
+    player = get_player_by_username(username)
+
+    if not player:
+        return {
+            "hata": "Oyuncu bulunamadı"
+        }
+
+    return player_to_dict(player)
 
 
 @app.post("/change_nickname")
 def change_player_nickname(player_id: int, new_nickname: str):
     change_nickname(player_id, new_nickname)
+
     return {
         "basarili": True,
         "mesaj": "Nick değiştirildi"
     }
-@app.post("/admin/add_plt")
-def admin_add_plt(
-    username: str,
-    amount: int
-):
 
+
+@app.post("/admin/add_plt")
+def admin_add_plt(username: str, amount: int):
     if amount <= 0:
         return {
             "basarili": False,
             "mesaj": "PLT miktarı 0'dan büyük olmalı"
         }
 
-    success = add_player_plt_by_username(
-        username,
-        amount
-    )
+    success = add_player_plt_by_username(username, amount)
 
     if not success:
         return {
@@ -155,10 +162,10 @@ def admin_add_plt(
 
     return {
         "basarili": True,
-        "username": player[1],
-        "nickname": player[3],
-        "company": player[4],
+        "username": player["username"],
+        "nickname": player["nickname"],
+        "company": player["company"],
         "eklenen_plt": amount,
-        "toplam_plt": player[9],
+        "toplam_plt": player["plt"],
         "mesaj": "PLT başarıyla eklendi"
     }
