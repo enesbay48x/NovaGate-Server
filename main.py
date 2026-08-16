@@ -50,6 +50,7 @@ def player_to_dict(player):
         "max_shield": float(player.get("max_shield", 0)),
         "alive": bool(player.get("alive", True)),
         "session_active": bool(player.get("session_active", False)),
+        "is_admin": bool(player.get("is_admin", False)),
         "rank": get_player_ranking(player["username"]),
         "clan_tag": get_clan_tag_for_username(player["username"]),
         "owned_ships": assets["owned_ships"],
