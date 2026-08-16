@@ -168,3 +168,34 @@ def add_player_plt_by_username(username, amount):
     db.close()
 
     return changed > 0
+
+
+def adjust_player_economy(username, bitcoin_delta=0, plt_delta=0, xp_delta=0, honor_delta=0):
+    db = connect()
+    cursor = db.cursor()
+
+    # PLT ve Bitcoin bakiyesi negatif olamaz.
+    cursor.execute("""
+    UPDATE players
+    SET bitcoin = bitcoin + ?,
+        plt = plt + ?,
+        exp = exp + ?,
+        honor = honor + ?
+    WHERE username = ?
+      AND bitcoin + ? >= 0
+      AND plt + ? >= 0
+    """, (
+        bitcoin_delta,
+        plt_delta,
+        xp_delta,
+        honor_delta,
+        username,
+        bitcoin_delta,
+        plt_delta
+    ))
+
+    changed = cursor.rowcount
+    db.commit()
+    db.close()
+
+    return changed > 0
