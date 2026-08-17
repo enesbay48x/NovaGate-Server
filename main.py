@@ -181,11 +181,20 @@ def add_log_disk(username: str, amount: int):
 
 @app.get("/skill/tree/{username}")
 def skill_tree(username: str):
-    return {"basarili": True, "skills": [dict(x) for x in get_player_skills(username)]}
+    state = get_player_skill_state(username)
+    if not state:
+        return {"basarili": False, "mesaj": "Oyuncu bulunamadı"}
+    return {"basarili": True, **state}
 
 @app.post("/skill/upgrade")
-def skill_upgrade(username: str, skill_id: str, cost: int = 1):
-    return {"basarili": upgrade_player_skill(username, skill_id, cost)}
+def skill_upgrade(username: str, skill_id: str):
+    success, message, state = upgrade_player_skill(username, skill_id)
+    if not success:
+        response = {"basarili": False, "mesaj": message}
+        if state:
+            response.update(state)
+        return response
+    return {"basarili": True, "mesaj": message, **state}
 
 
 @app.post("/economy/adjust")
