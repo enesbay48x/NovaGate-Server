@@ -1,3 +1,4 @@
+from database import buy_log_disks_by_username
 from fastapi import FastAPI
 from database import *
 
@@ -261,6 +262,18 @@ def market_buy(username: str, kind: str, item_id: str):
             item_id,
             item["currency"],
             item["price"]
+        )
+
+    elif kind == "log_disk":
+        try:
+            quantity = int(item_id)
+        except (TypeError, ValueError):
+            return {"basarili": False, "mesaj": "Geçersiz Log Disk miktarı"}
+
+        success, message, balances = buy_log_disks_by_username(
+            username,
+            quantity,
+            300
         )
 
     elif kind == "droid":
