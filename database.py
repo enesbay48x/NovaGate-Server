@@ -431,6 +431,61 @@ def _add_inventory_item(cursor, player_id, item_type, item_name, amount=1):
         """, (player_id, item_type, item_name, amount))
 
 
+
+def buy_log_disks_by_username(username, quantity, unit_price=300):
+    quantity = int(quantity)
+    unit_price = int(unit_price)
+
+    if quantity not in (1, 50, 100, 1000):
+        return False, "Geçersiz Log Disk paketi.", None
+
+    total_price = quantity * unit_price
+
+    db = connect()
+    cursor = db.cursor()
+    try:
+        cursor.execute("""
+        SELECT id, plt, log_disks
+        FROM players
+        WHERE username=%s
+        FOR UPDATE
+        """, (username,))
+        player = cursor.fetchone()
+
+        if not player:
+            db.rollback()
+            return False, "Oyuncu bulunamadı.", None
+
+        current_plt = int(player["plt"])
+        current_logs = int(player["log_disks"] or 0)
+
+        if current_plt < total_price:
+            db.rollback()
+            return False, "Yeterli PLT yok.", None
+
+        new_plt = current_plt - total_price
+        new_logs = current_logs + quantity
+
+        cursor.execute("""
+        UPDATE players
+        SET plt=%s, log_disks=%s
+        WHERE id=%s
+        """, (new_plt, new_logs, player["id"]))
+
+        db.commit()
+        return True, "Log Disk satın alındı.", {
+            "bitcoin": int(player.get("bitcoin", 0)) if hasattr(player, "get") else 0,
+            "plt": new_plt,
+            "log_disks": new_logs
+        }
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        cursor.close()
+        db.close()
+
+
 def buy_market_item_by_username(username, kind, item_id, currency, price):
     currency = currency.upper()
     kind = kind.lower()
