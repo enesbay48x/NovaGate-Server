@@ -321,6 +321,35 @@ def market_buy(username: str, kind: str, item_id: str):
         "droid_types": assets["droid_types"]
     }
 
+
+@app.post("/market/sell_droid")
+def market_sell_droid(username: str, droid_index: int):
+    success, message, sale = sell_droid_by_username(
+        username, droid_index, PLUS_DROID_PRICES, ZEUS_DROID_PRICES
+    )
+
+    if not success:
+        return {"basarili": False, "mesaj": message}
+
+    player = get_player_by_username(username)
+    assets = get_player_assets_by_username(username)
+
+    return {
+        "basarili": True,
+        "mesaj": message,
+        "username": username,
+        "bitcoin": int(player["bitcoin"]),
+        "plt": int(player["plt"]),
+        "owned_ships": assets["owned_ships"],
+        "inventory": assets["inventory"],
+        "droid_types": assets["droid_types"],
+        "sold_type": sale["sold_type"],
+        "currency": sale["currency"],
+        "refund": int(sale["refund"]),
+        "original_price": int(sale["original_price"]),
+    }
+
+
 # === NovaGate MMO Core V2 ===
 import time
 import threading
