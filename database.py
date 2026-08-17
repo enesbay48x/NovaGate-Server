@@ -278,33 +278,128 @@ def add_player_log_disks(username, amount):
     return ok
 
 
+PILOT_POINT_COSTS = [
+    30, 35, 40, 46, 54, 62, 72, 83, 96, 112,
+    129, 149, 173, 200, 231, 268, 310, 358, 414, 479,
+    555, 642, 743, 859, 994, 1150, 1331, 1540, 1782, 2063
+]
+VALID_SKILLS = {
+    "laser_power",
+    "npc_damage",
+    "critical_damage",
+    "shield_power",
+    "hp_power",
+    "motor_power"
+}
+
+
 def get_player_skills(username):
-    db = connect(); cursor = db.cursor()
-    cursor.execute("SELECT id FROM players WHERE username=%s", (username,))
-    p = cursor.fetchone()
-    if not p:
-        cursor.close(); db.close(); return []
-    cursor.execute("SELECT skill_id, level FROM player_skills WHERE player_id=%s", (p["id"],))
-    rows = cursor.fetchall()
-    cursor.close(); db.close()
-    return rows
+    state = get_player_skill_state(username)
+    if not state:
+        return []
+    return [
+        {"skill_id": skill_id, "level": level}
+        for skill_id, level in state["skills"].items()
+    ]
 
 
-def upgrade_player_skill(username, skill_id, cost):
-    db = connect(); cursor = db.cursor()
+def get_player_skill_state(username):
+    db = connect()
+    cursor = db.cursor()
     try:
-        cursor.execute("SELECT id, log_disks FROM players WHERE username=%s FOR UPDATE", (username,))
-        p = cursor.fetchone()
-        if not p or int(p["log_disks"]) < cost:
-            db.rollback(); return False
-        cursor.execute("UPDATE players SET log_disks=log_disks-%s WHERE id=%s", (cost,p["id"]))
-        cursor.execute("""INSERT INTO player_skills(player_id,skill_id,level) VALUES(%s,%s,1)
-        ON CONFLICT(player_id,skill_id) DO UPDATE SET level=player_skills.level+1""", (p["id"],skill_id))
-        db.commit(); return True
-    except Exception:
-        db.rollback(); raise
+        cursor.execute(
+            "SELECT id, log_disks, skill_points FROM players WHERE username=%s",
+            (username,)
+        )
+        player = cursor.fetchone()
+        if not player:
+            return None
+
+        skills = {skill_id: 0 for skill_id in VALID_SKILLS}
+        cursor.execute(
+            "SELECT skill_id, level FROM player_skills WHERE player_id=%s",
+            (player["id"],)
+        )
+        for row in cursor.fetchall():
+            skill_id = str(row["skill_id"])
+            if skill_id in skills:
+                skills[skill_id] = max(0, min(5, int(row["level"])))
+
+        points = max(0, min(30, int(player["skill_points"] or 0)))
+        next_cost = PILOT_POINT_COSTS[points] if points < 30 else 0
+
+        return {
+            "log_disks": int(player["log_disks"] or 0),
+            "skill_points": points,
+            "max_points": 30,
+            "next_cost": next_cost,
+            "full_tree_cost": sum(PILOT_POINT_COSTS),
+            "skills": skills
+        }
     finally:
-        cursor.close(); db.close()
+        cursor.close()
+        db.close()
+
+
+def upgrade_player_skill(username, skill_id, _legacy_cost=None):
+    skill_id = str(skill_id).strip()
+    if skill_id not in VALID_SKILLS:
+        return False, "Geçersiz yetenek.", None
+
+    db = connect()
+    cursor = db.cursor()
+    try:
+        cursor.execute(
+            "SELECT id, log_disks, skill_points FROM players WHERE username=%s FOR UPDATE",
+            (username,)
+        )
+        player = cursor.fetchone()
+        if not player:
+            db.rollback()
+            return False, "Oyuncu bulunamadı.", None
+
+        points = max(0, min(30, int(player["skill_points"] or 0)))
+        if points >= 30:
+            db.rollback()
+            return False, "Pilot Puanı 30/30 dolu.", None
+
+        cursor.execute(
+            "SELECT level FROM player_skills WHERE player_id=%s AND skill_id=%s FOR UPDATE",
+            (player["id"], skill_id)
+        )
+        row = cursor.fetchone()
+        current_level = int(row["level"]) if row else 0
+        if current_level >= 5:
+            db.rollback()
+            return False, "Bu yetenek zaten 5/5.", None
+
+        cost = PILOT_POINT_COSTS[points]
+        current_logs = int(player["log_disks"] or 0)
+        if current_logs < cost:
+            db.rollback()
+            return False, "Yetersiz Log Disk. Gereken: %s" % cost, None
+
+        cursor.execute(
+            "UPDATE players SET log_disks=log_disks-%s, skill_points=skill_points+1 WHERE id=%s",
+            (cost, player["id"])
+        )
+        cursor.execute(
+            """INSERT INTO player_skills(player_id, skill_id, level)
+               VALUES(%s,%s,1)
+               ON CONFLICT(player_id,skill_id)
+               DO UPDATE SET level=LEAST(player_skills.level+1,5)""",
+            (player["id"], skill_id)
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        cursor.close()
+        db.close()
+
+    state = get_player_skill_state(username)
+    return True, "Yetenek yükseltildi.", state
 
 
 def add_player_plt_by_username(username, amount):
@@ -445,7 +540,7 @@ def buy_log_disks_by_username(username, quantity, unit_price=300):
     cursor = db.cursor()
     try:
         cursor.execute("""
-        SELECT id, plt, log_disks
+        SELECT id, bitcoin, plt, log_disks
         FROM players
         WHERE username=%s
         FOR UPDATE
@@ -474,7 +569,7 @@ def buy_log_disks_by_username(username, quantity, unit_price=300):
 
         db.commit()
         return True, "Log Disk satın alındı.", {
-            "bitcoin": int(player.get("bitcoin", 0)) if hasattr(player, "get") else 0,
+            "bitcoin": int(player["bitcoin"]),
             "plt": new_plt,
             "log_disks": new_logs
         }
