@@ -2316,3 +2316,53 @@ def apply_daily_clan_tax(now_ts=None):
         db.commit()
     finally:
         c.close(); db.close()
+
+
+# ============================================================
+# SESSION HEARTBEAT FIX
+# ============================================================
+
+def update_session_heartbeat(username, now):
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE players
+            SET last_seen = %s,
+                session_active = TRUE
+            WHERE username = %s
+            """,
+            (now, username)
+        )
+        conn.commit()
+        ok = cur.rowcount > 0
+        cur.close()
+        conn.close()
+        return ok
+    except Exception as e:
+        print("HEARTBEAT ERROR:", repr(e))
+        return False
+
+
+def force_logout_session(username):
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE players
+            SET session_active = FALSE,
+                last_seen = 0
+            WHERE username = %s
+            """,
+            (username,)
+        )
+        conn.commit()
+        ok = cur.rowcount > 0
+        cur.close()
+        conn.close()
+        return ok
+    except Exception as e:
+        print("FORCE LOGOUT ERROR:", repr(e))
+        return False
