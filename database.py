@@ -230,7 +230,6 @@ def login_player_single_session(username, password, now_ts, active_window_second
         cursor.execute("""
         SELECT * FROM players
         WHERE username=%s AND password=%s
-        FOR UPDATE
         """, (username, password))
         row = cursor.fetchone()
         if not row:
