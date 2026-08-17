@@ -50,6 +50,8 @@ def player_to_dict(player):
         "honor": player["honor"],
         "bitcoin": player["bitcoin"],
         "plt": player["plt"],
+        "log_disks": int(player.get("log_disks",0)),
+        "skill_points": int(player.get("skill_points",0)),
         "ship": player["ship"],
         "map": player["map"] or "",
         "x": player["pos_x"],
@@ -170,6 +172,19 @@ def admin_add_plt(username: str, amount: int):
         "toplam_plt": player["plt"],
         "mesaj": "PLT başarıyla eklendi"
     }
+
+
+@app.post("/skill/log_disk/add")
+def add_log_disk(username: str, amount: int):
+    return {"basarili": add_player_log_disks(username, amount)}
+
+@app.get("/skill/tree/{username}")
+def skill_tree(username: str):
+    return {"basarili": True, "skills": [dict(x) for x in get_player_skills(username)]}
+
+@app.post("/skill/upgrade")
+def skill_upgrade(username: str, skill_id: str, cost: int = 1):
+    return {"basarili": upgrade_player_skill(username, skill_id, cost)}
 
 
 @app.post("/economy/adjust")
