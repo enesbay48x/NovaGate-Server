@@ -711,6 +711,21 @@ def get_player_world_state(username):
     return row
 
 
+def update_player_position_state(username, map_name, x, y, now_ts):
+    db = connect()
+    c = db.cursor()
+    c.execute("""
+        UPDATE players
+        SET map=%s, pos_x=%s, pos_y=%s, last_seen=%s, session_active=TRUE
+        WHERE username=%s
+    """, (map_name, int(x), int(y), float(now_ts), username))
+    changed = c.rowcount
+    db.commit()
+    c.close()
+    db.close()
+    return changed > 0
+
+
 def update_player_damage_state(username, health, shield, map_name, x, y, now_ts):
     db = connect()
     c = db.cursor()
