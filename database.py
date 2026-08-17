@@ -223,7 +223,6 @@ def ensure_session_columns():
 
 def login_player_single_session(username, password, now_ts, active_window_seconds=12.0):
     """Tek hesap = tek canlı oturum. Crash sonrası kısa timeout ile tekrar girişe izin verir."""
-    ensure_session_columns()
     db = connect()
     cursor = db.cursor()
     try:
