@@ -747,6 +747,106 @@ def buy_droid_by_username(username, droid_type, currency, price_steps):
         cursor.close()
         db.close()
 
+
+def sell_droid_by_username(username, droid_index, plus_price_steps, zeus_price_steps):
+    """Bir droidi PostgreSQL envanterinden siler ve alış basamağının %50'sini iade eder."""
+    droid_index = int(droid_index)
+
+    db = connect()
+    cursor = db.cursor()
+    try:
+        cursor.execute("""
+        SELECT id, bitcoin, plt
+        FROM players
+        WHERE username=%s
+        FOR UPDATE
+        """, (username,))
+        player = cursor.fetchone()
+
+        if not player:
+            db.rollback()
+            return False, "Oyuncu bulunamadı.", None
+
+        player_id = int(player["id"])
+
+        # get_player_assets_by_username ile aynı sıra: inventory.id, sonra amount kadar genişletme.
+        cursor.execute("""
+        SELECT id, item_name, amount
+        FROM inventory
+        WHERE player_id=%s AND item_type='droid' AND amount > 0
+        ORDER BY id
+        FOR UPDATE
+        """, (player_id,))
+        rows = cursor.fetchall()
+
+        expanded = []
+        type_counts = {"PLUS": 0, "ZEUS": 0}
+        for row in rows:
+            droid_type = str(row["item_name"] or "").upper()
+            amount = max(0, int(row["amount"] or 0))
+            if droid_type in type_counts:
+                type_counts[droid_type] += amount
+            for _ in range(amount):
+                expanded.append((int(row["id"]), droid_type))
+
+        if droid_index < 0 or droid_index >= len(expanded):
+            db.rollback()
+            return False, "Droid bulunamadı.", None
+
+        inventory_id, sold_type = expanded[droid_index]
+
+        if sold_type == "PLUS":
+            currency = "BTC"
+            price_steps = plus_price_steps
+        elif sold_type == "ZEUS":
+            currency = "PLT"
+            price_steps = zeus_price_steps
+        else:
+            db.rollback()
+            return False, "Geçersiz droid türü.", None
+
+        same_type_count = max(1, int(type_counts.get(sold_type, 1)))
+        price_index = min(same_type_count - 1, len(price_steps) - 1)
+        original_price = int(price_steps[price_index])
+        refund = original_price // 2
+
+        cursor.execute("SELECT amount FROM inventory WHERE id=%s FOR UPDATE", (inventory_id,))
+        inv_row = cursor.fetchone()
+        if not inv_row or int(inv_row["amount"] or 0) <= 0:
+            db.rollback()
+            return False, "Droid envanter kaydı bulunamadı.", None
+
+        if int(inv_row["amount"]) <= 1:
+            cursor.execute("DELETE FROM inventory WHERE id=%s", (inventory_id,))
+        else:
+            cursor.execute("UPDATE inventory SET amount=amount-1 WHERE id=%s", (inventory_id,))
+
+        if currency == "BTC":
+            cursor.execute("UPDATE players SET bitcoin=bitcoin+%s WHERE id=%s", (refund, player_id))
+        else:
+            cursor.execute("UPDATE players SET plt=plt+%s WHERE id=%s", (refund, player_id))
+
+        db.commit()
+
+        cursor.execute("SELECT bitcoin, plt FROM players WHERE id=%s", (player_id,))
+        balances = cursor.fetchone()
+
+        return True, "%s droid satıldı. İade: %s %s" % (sold_type, refund, currency), {
+            "bitcoin": int(balances["bitcoin"]),
+            "plt": int(balances["plt"]),
+            "sold_type": sold_type,
+            "currency": currency,
+            "refund": refund,
+            "original_price": original_price,
+        }
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        cursor.close()
+        db.close()
+
+
 # === NovaGate MMO Core V2 ===
 import math
 import random
