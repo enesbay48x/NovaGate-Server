@@ -22,6 +22,14 @@ EQUIPMENT_CATALOG = {
     "Hız 2": {"currency": "PLT", "price": 10000},
 }
 
+EXTRA_CATALOG = {
+    "DMG-B01": {"currency": "PLT", "price": 15000},
+    "HP-B01": {"currency": "PLT", "price": 15000},
+    "SHD-B01": {"currency": "PLT", "price": 15000},
+    "XP-B01": {"currency": "PLT", "price": 15000},
+    "HON-B01": {"currency": "PLT", "price": 15000},
+}
+
 PLUS_DROID_PRICES = [100000, 200000, 400000, 800000, 1600000, 3200000, 6400000, 12800000]
 ZEUS_DROID_PRICES = [12000, 20000, 35000, 60000, 100000, 170000, 300000, 500000]
 
@@ -222,6 +230,19 @@ def market_buy(username: str, kind: str, item_id: str):
         success, message, balances = buy_market_item_by_username(
             username,
             "equipment",
+            item_id,
+            item["currency"],
+            item["price"]
+        )
+
+    elif kind == "extra":
+        item = EXTRA_CATALOG.get(item_id)
+        if not item:
+            return {"basarili": False, "mesaj": "Extra market kataloğunda bulunamadı"}
+
+        success, message, balances = buy_market_item_by_username(
+            username,
+            "extra",
             item_id,
             item["currency"],
             item["price"]
