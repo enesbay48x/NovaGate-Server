@@ -314,6 +314,13 @@ class DamageStateBody(BaseModel):
     y: float
 
 
+class PositionStateBody(BaseModel):
+    username: str
+    map: str
+    x: float
+    y: float
+
+
 class LogoutBody(BaseModel):
     username: str
     map: str
@@ -417,6 +424,16 @@ def world_players(map_name: str, username: str = ""):
         players.append(item)
     return {"server_time": now, "players": players}
 
+
+
+
+@app.post("/world/player/position_state")
+def world_player_position_state(body: PositionStateBody):
+    now = time.time()
+    ok = update_player_position_state(
+        body.username, body.map, body.x, body.y, now
+    )
+    return {"basarili": ok, "server_time": now}
 
 @app.post("/world/player/damage_state")
 def world_player_damage_state(body: DamageStateBody):
