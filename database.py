@@ -205,6 +205,61 @@ def login_player(username, password):
     return row
 
 
+
+
+def ensure_session_columns():
+    """Login için gerekli oturum kolonlarını garanti eder."""
+    db = connect()
+    cursor = db.cursor()
+    try:
+        cursor.execute("ALTER TABLE players ADD COLUMN IF NOT EXISTS session_active BOOLEAN DEFAULT FALSE")
+        cursor.execute("ALTER TABLE players ADD COLUMN IF NOT EXISTS last_seen DOUBLE PRECISION DEFAULT 0")
+        cursor.execute("ALTER TABLE players ADD COLUMN IF NOT EXISTS logout_requested_at DOUBLE PRECISION DEFAULT 0")
+        cursor.execute("ALTER TABLE players ADD COLUMN IF NOT EXISTS logout_deadline DOUBLE PRECISION DEFAULT 0")
+        db.commit()
+    finally:
+        cursor.close()
+        db.close()
+
+def login_player_single_session(username, password, now_ts, active_window_seconds=12.0):
+    """Tek hesap = tek canlı oturum. Crash sonrası kısa timeout ile tekrar girişe izin verir."""
+    ensure_session_columns()
+    db = connect()
+    cursor = db.cursor()
+    try:
+        cursor.execute("""
+        SELECT * FROM players
+        WHERE username=%s AND password=%s
+        FOR UPDATE
+        """, (username, password))
+        row = cursor.fetchone()
+        if not row:
+            db.rollback()
+            return None, "invalid"
+
+        session_active = bool(row.get("session_active", False))
+        last_seen = float(row.get("last_seen", 0) or 0)
+        if session_active and last_seen >= float(now_ts) - float(active_window_seconds):
+            db.rollback()
+            return None, "already_online"
+
+        cursor.execute("""
+        UPDATE players
+        SET session_active=TRUE, last_seen=%s,
+            logout_requested_at=0, logout_deadline=0
+        WHERE id=%s
+        """, (float(now_ts), row["id"]))
+        db.commit()
+        cursor.execute("SELECT * FROM players WHERE id=%s", (row["id"],))
+        return cursor.fetchone(), "ok"
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        cursor.close()
+        db.close()
+
+
 def get_player(player_id):
     db = connect()
     cursor = db.cursor()
@@ -979,16 +1034,20 @@ def update_player_presence(username, map_name, x, y, now_ts, health=None, shield
 def get_online_players(map_name, now_ts, exclude_username=""):
     db = connect()
     c = db.cursor()
+    # Client presence heartbeat'i 5 saniyede bir. 12 saniyeden eski kayıt
+    # canlı oyuncu sayılmaz; böylece hem gerçek oyuncular görünür hem ghost kalmaz.
+    cutoff = float(now_ts) - 12.0
     c.execute("""
         SELECT id,username,nickname,company,ship,map,pos_x,pos_y,last_seen,
                health,shield,max_health,max_shield,alive,session_active
         FROM players
         WHERE map=%s
           AND session_active=TRUE
+          AND last_seen>=%s
           AND alive=TRUE
           AND username<>%s
         ORDER BY id
-    """, (map_name, exclude_username))
+    """, (map_name, cutoff, exclude_username))
     rows = c.fetchall()
     c.close()
     db.close()
