@@ -442,6 +442,8 @@ def buy_market_item_by_username(username, kind, item_id, currency, price):
             """, (player_id, item_id))
         elif kind == "equipment":
             _add_inventory_item(cursor, player_id, "equipment", item_id, 1)
+        elif kind == "extra":
+            _add_inventory_item(cursor, player_id, "extra", item_id, 1)
         else:
             db.rollback()
             return False, "Geçersiz market ürün tipi.", None
