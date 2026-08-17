@@ -48,7 +48,9 @@ def create_tables():
         ("starter_ship_kills", "BIGINT DEFAULT 0"),
         ("missions_completed", "BIGINT DEFAULT 0"),
         ("registered_at", "TIMESTAMPTZ DEFAULT NOW()"),
-        ("is_admin", "BOOLEAN DEFAULT FALSE")
+        ("is_admin", "BOOLEAN DEFAULT FALSE"),
+        ("skill_points", "INTEGER DEFAULT 0"),
+        ("log_disks", "INTEGER DEFAULT 0")
     ]
     for column_name, column_type in rank_columns:
         cursor.execute(
@@ -146,6 +148,16 @@ def create_tables():
     """)
 
     cursor.execute("ALTER TABLE players ADD COLUMN IF NOT EXISTS last_clan_tax_at TIMESTAMPTZ DEFAULT NOW()")
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS player_skills(
+        id SERIAL PRIMARY KEY,
+        player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+        skill_id TEXT NOT NULL,
+        level INTEGER DEFAULT 0,
+        UNIQUE(player_id, skill_id)
+    )
+    """)
 
     db.commit()
     cursor.close()
@@ -255,6 +267,44 @@ def change_nickname(player_id, new_nickname):
     finally:
         cursor.close()
         db.close()
+
+
+def add_player_log_disks(username, amount):
+    db = connect()
+    cursor = db.cursor()
+    cursor.execute("UPDATE players SET log_disks = log_disks + %s WHERE username=%s", (amount, username))
+    ok = cursor.rowcount > 0
+    db.commit(); cursor.close(); db.close()
+    return ok
+
+
+def get_player_skills(username):
+    db = connect(); cursor = db.cursor()
+    cursor.execute("SELECT id FROM players WHERE username=%s", (username,))
+    p = cursor.fetchone()
+    if not p:
+        cursor.close(); db.close(); return []
+    cursor.execute("SELECT skill_id, level FROM player_skills WHERE player_id=%s", (p["id"],))
+    rows = cursor.fetchall()
+    cursor.close(); db.close()
+    return rows
+
+
+def upgrade_player_skill(username, skill_id, cost):
+    db = connect(); cursor = db.cursor()
+    try:
+        cursor.execute("SELECT id, log_disks FROM players WHERE username=%s FOR UPDATE", (username,))
+        p = cursor.fetchone()
+        if not p or int(p["log_disks"]) < cost:
+            db.rollback(); return False
+        cursor.execute("UPDATE players SET log_disks=log_disks-%s WHERE id=%s", (cost,p["id"]))
+        cursor.execute("""INSERT INTO player_skills(player_id,skill_id,level) VALUES(%s,%s,1)
+        ON CONFLICT(player_id,skill_id) DO UPDATE SET level=player_skills.level+1""", (p["id"],skill_id))
+        db.commit(); return True
+    except Exception:
+        db.rollback(); raise
+    finally:
+        cursor.close(); db.close()
 
 
 def add_player_plt_by_username(username, amount):
