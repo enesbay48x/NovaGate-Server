@@ -3,6 +3,7 @@ from database import buy_log_disks_by_username
 from database import login_player_single_session
 from fastapi import FastAPI
 from database import *
+from database import update_session_heartbeat, force_logout_session
 
 app = FastAPI(
     title="NovaGate Server",
@@ -831,3 +832,22 @@ def clan_diplomacy_request(body: ClanDiplomacyBody):
 def clan_diplomacy_respond(body: ClanDiplomacyResponseBody):
     ok, msg = respond_clan_diplomacy(body.username, body.source_clan_id, body.relation, body.accept)
     return {"basarili": ok, "mesaj": msg}
+
+
+@app.post("/world/heartbeat")
+def world_heartbeat(username: str):
+    now = time.time()
+    ok = update_session_heartbeat(username, now)
+    return {
+        "basarili": ok,
+        "server_time": now
+    }
+
+
+@app.post("/world/session/force_logout")
+def world_force_logout(username: str):
+    ok = force_logout_session(username)
+    return {
+        "basarili": ok
+    }
+
