@@ -104,18 +104,49 @@ def register(username: str, password: str, nickname: str, company: str = ""):
 
 @app.post("/login")
 def login(username: str, password: str):
-    player, reason = login_player_single_session(username, password, time.time(), 12.0)
+    print("LOGIN BASLADI:", username)
+
+    player, reason = login_player_single_session(
+        username,
+        password,
+        time.time(),
+        12.0
+    )
+
+    print("LOGIN DB SONUCU:", reason)
+
     if reason == "already_online":
         return {
             "basarili": False,
             "mesaj": "Bu hesap şu anda başka bir cihazda çevrimiçi."
         }
-    if not player:
-        return {"basarili": False, "mesaj": "Kullanıcı adı veya şifre yanlış"}
 
+    if not player:
+        return {
+            "basarili": False,
+            "mesaj": "Kullanıcı adı veya şifre yanlış"
+        }
+
+    # Login sırasında ağır inventory/droid sorgularını çalıştırmıyoruz.
+    # Oyuncu bilgisi daha sonra ayrı isteklerle alınabilir.
     return {
         "basarili": True,
-        "oyuncu": player_to_dict(player)
+        "oyuncu": {
+            "username": player["username"],
+            "nickname": player["nickname"],
+            "company": player["company"],
+            "level": player["level"],
+            "exp": player["exp"],
+            "honor": player["honor"],
+            "bitcoin": player["bitcoin"],
+            "plt": player["plt"],
+            "ship": player["ship"],
+            "map": player["map"] or "",
+            "x": player["pos_x"],
+            "y": player["pos_y"],
+            "health": float(player.get("health", 400000)),
+            "shield": float(player.get("shield", 0))
+        }
     }
 
 
