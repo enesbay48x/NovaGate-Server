@@ -24,6 +24,8 @@ from config import (
     RATE_LIMIT_REGISTER,
     SECRET_KEY,
     DB_PATH,
+    ADMIN_USERNAME,
+    ADMIN_PASSWORD,
 )
 from websocket_server import manager as ws_manager, npc_manager
 
@@ -101,14 +103,24 @@ async def admin_players(admin: dict = Depends(require_admin)):
 async def admin_player(username: str, admin: dict = Depends(require_admin)):
     async with aiosqlite.connect(DB_PATH) as db:
         row = await (await db.execute("SELECT a.id, a.username, a.player_id, a.company, a.role, e.btc, e.plt, e.gold FROM accounts a LEFT JOIN economy e ON e.player_id = a.player_id WHERE a.username = ?", (username,))).fetchone()
+        inv_rows = await (await db.execute("SELECT item_id, quantity FROM inventory WHERE player_id = (SELECT player_id FROM accounts WHERE username = ?)", (username,))).fetchall()
     if not row:
         raise HTTPException(status_code=404, detail="Player not found")
     session = ws_manager.active_connections.get(row[2])
-    return {"account_id": row[0], "username": row[1], "player_id": row[2], "company": row[3] or "", "role": row[4], "btc": row[5] or 0, "plt": row[6] or 0, "gold": row[7] or 0, "online": session is not None, "map_id": session.map_id if session else "1-1", "position": [session.position_x, session.position_y] if session else [0.0, 0.0]}
-
-
-
-    return {"status": "ok"}
+    return {
+        "account_id": row[0],
+        "username": row[1],
+        "player_id": row[2],
+        "company": row[3] or "",
+        "role": row[4],
+        "btc": row[5] or 0,
+        "plt": row[6] or 0,
+        "gold": row[7] or 0,
+        "inventory": {r[0]: r[1] for r in inv_rows},
+        "online": session is not None,
+        "map_id": session.map_id if session else "1-1",
+        "position": [session.position_x, session.position_y] if session else [0.0, 0.0],
+    }
 
 
 @app.exception_handler(RateLimitExceeded)
@@ -147,6 +159,10 @@ class CompanyUpdateRequest(BaseModel):
 class AdminCurrencyRequest(BaseModel):
     currency: str
     amount: int
+
+
+class AdminRoleRequest(BaseModel):
+    role: str
 
 
 class AdminTeleportRequest(BaseModel):
@@ -336,9 +352,137 @@ async def init_db():
             await db.commit()
 
 
+# ---------------------------------------------------------------------------
+# Database seed / bootstrap
+# ---------------------------------------------------------------------------
+# Render FREE has no persistent disk, so every cold start gets a fresh SQLite
+# file. These helpers guarantee that the known test account (bb) plus a
+# default admin account exist after every restart WITHOUT touching the local
+# development database (which is loaded from DB_PATH only when it already
+# exists on disk).
+# ---------------------------------------------------------------------------
+SEED_BB_USERNAME = "bb"
+SEED_BB_PASSWORD = "bb"
+SEED_BB_PLAYER_ID = "47599"
+SEED_BB_COMPANY = "EIC"
+SEED_BB_ECONOMY = {"btc": 1197616, "plt": 4526, "gold": 0}
+SEED_BB_INVENTORY = {
+    "lf1": 3,
+    "lf3": 8,
+    "hiz1": 1,
+    "kalkan1": 1,
+}
+
+
+async def _seed_test_account(db) -> None:
+    """Ensure the known test account 'bb' exists with its economy + inventory.
+
+    Uses INSERT OR IGNORE so an existing local database (which already has bb)
+    is never modified or overwritten.
+    """
+    now = _unix_now()
+    existing = await (
+        await db.execute("SELECT id FROM accounts WHERE username = ?", (SEED_BB_USERNAME,))
+    ).fetchone()
+    if existing is not None:
+        # Account already present (local dev DB). Only make sure the economy +
+        # inventory rows exist so admin currency operations have somewhere to
+        # write. Never overwrite existing balances.
+        eco = await (
+            await db.execute("SELECT 1 FROM economy WHERE player_id = ?", (SEED_BB_PLAYER_ID,))
+        ).fetchone()
+        if eco is None:
+            await db.execute(
+                "INSERT INTO economy (player_id, btc, plt, gold, updated_at) VALUES (?, ?, ?, ?, ?)",
+                (SEED_BB_PLAYER_ID, SEED_BB_ECONOMY["btc"], SEED_BB_ECONOMY["plt"],
+                 SEED_BB_ECONOMY["gold"], now),
+            )
+        for item_id, qty in SEED_BB_INVENTORY.items():
+            inv = await (
+                await db.execute(
+                    "SELECT 1 FROM inventory WHERE player_id = ? AND item_id = ?",
+                    (SEED_BB_PLAYER_ID, item_id),
+                )
+            ).fetchone()
+            if inv is None:
+                await db.execute(
+                    "INSERT INTO inventory (player_id, item_id, quantity) VALUES (?, ?, ?)",
+                    (SEED_BB_PLAYER_ID, item_id, qty),
+                )
+        await db.commit()
+        return
+
+    password_hash = _hash_password(SEED_BB_PASSWORD)
+    cursor = await db.execute(
+        "INSERT INTO accounts (username, password_hash, player_id, nickname, company, role, created_at) "
+        "VALUES (?, ?, ?, ?, ?, 'player', ?)",
+        (SEED_BB_USERNAME, password_hash, SEED_BB_PLAYER_ID, SEED_BB_USERNAME,
+         SEED_BB_COMPANY, now),
+    )
+    account_id = cursor.lastrowid
+    await db.execute(
+        "INSERT INTO economy (player_id, btc, plt, gold, updated_at) VALUES (?, ?, ?, ?, ?)",
+        (SEED_BB_PLAYER_ID, SEED_BB_ECONOMY["btc"], SEED_BB_ECONOMY["plt"],
+         SEED_BB_ECONOMY["gold"], now),
+    )
+    for item_id, qty in SEED_BB_INVENTORY.items():
+        await db.execute(
+            "INSERT INTO inventory (player_id, item_id, quantity) VALUES (?, ?, ?)",
+            (SEED_BB_PLAYER_ID, item_id, qty),
+        )
+    await db.commit()
+
+
+async def _bootstrap_admin(db) -> None:
+    """Create/repair the admin account from ADMIN_USERNAME / ADMIN_PASSWORD.
+
+    - If the named admin account does not exist, create it (bcrypt hashed,
+      plaintext password is NEVER stored).
+    - If it exists, only ensure role='admin'. Existing economy / inventory /
+      password are left untouched so a real admin can keep their password.
+    """
+    username = (ADMIN_USERNAME or "").strip()
+    password = ADMIN_PASSWORD or ""
+    if not username or not password:
+        return
+
+    existing = await (
+        await db.execute("SELECT id, role FROM accounts WHERE username = ?", (username,))
+    ).fetchone()
+    if existing is None:
+        now = _unix_now()
+        player_id = _gen_player_id()
+        await db.execute(
+            "INSERT INTO accounts (username, password_hash, player_id, nickname, company, role, created_at) "
+            "VALUES (?, ?, ?, ?, ?, 'admin', ?)",
+            (username, _hash_password(password), player_id, username, "", now),
+        )
+        await db.execute(
+            "INSERT OR IGNORE INTO economy (player_id, btc, plt, gold, updated_at) "
+            "VALUES (?, 0, 0, 0, ?)",
+            (player_id, now),
+        )
+        await db.commit()
+        return
+
+    if existing[1] != "admin":
+        await db.execute(
+            "UPDATE accounts SET role = 'admin' WHERE id = ?", (existing[0],)
+        )
+        await db.commit()
+
+
+async def _run_seed_bootstrap() -> None:
+    """Run seed + admin bootstrap once after schema initialization."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await _seed_test_account(db)
+        await _bootstrap_admin(db)
+
+
 @app.on_event("startup")
 async def startup():
     await init_db()
+    await _run_seed_bootstrap()
     from websocket_server import register_websocket_routes, on_startup
     register_websocket_routes(app, SECRET_KEY, DB_PATH)
     await on_startup(app, SECRET_KEY, DB_PATH)
@@ -472,20 +616,82 @@ async def update_company(request: CompanyUpdateRequest, account: dict = Depends(
 
 
 # ---------------------------------------------------------------------------
+VALID_ROLES = {"player", "admin"}
+
+
+@app.put("/admin/player/{username}/role")
+async def admin_set_role(username: str, req: AdminRoleRequest, admin: dict = Depends(require_admin)):
+    role = req.role.strip().lower()
+    if role not in VALID_ROLES:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Allowed: {sorted(VALID_ROLES)}")
+    async with aiosqlite.connect(DB_PATH) as db:
+        row = await (await db.execute("SELECT id, role FROM accounts WHERE username = ?", (username,))).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Player not found")
+        if row[0] == admin["id"] and role != "admin":
+            raise HTTPException(status_code=400, detail="Cannot demote yourself")
+        await db.execute("UPDATE accounts SET role = ? WHERE id = ?", (role, row[0]))
+        await _admin_log(db, admin, "role_update", username, f"role:{role}")
+        await db.commit()
+    return {"success": True, "username": username, "role": role}
+
+
 @app.post("/admin/player/{username}/currency")
 async def admin_currency(username: str, req: AdminCurrencyRequest, admin: dict = Depends(require_admin)):
     currency = req.currency.strip().upper()
     if currency not in {"BTC", "PLT", "GOLD"}:
         raise HTTPException(status_code=400, detail="Invalid currency")
+    column = currency.lower()
+    now = _unix_now()
     async with aiosqlite.connect(DB_PATH) as db:
         row = await (await db.execute("SELECT player_id FROM accounts WHERE username = ?", (username,))).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Player not found")
-        column = currency.lower()
-        await db.execute(f"UPDATE economy SET {column} = MAX(0, COALESCE({column}, 0) + ?), updated_at = ? WHERE player_id = ?", (req.amount, _unix_now(), row[0]))
-        await _admin_log(db, admin, "currency_update", username, f"{currency}:{req.amount}")
-        await db.commit()
-    return {"success": True, "username": username, "currency": currency, "amount": req.amount}
+        player_id = row[0]
+
+        async with db.execute("BEGIN IMMEDIATE TRANSACTION"):
+            cursor = await db.execute(
+                f"SELECT btc, plt, gold FROM economy WHERE player_id = ?",
+                (player_id,),
+            )
+            bal_row = await cursor.fetchone()
+            if bal_row is None:
+                await db.execute(
+                    "INSERT INTO economy (player_id, btc, plt, gold, updated_at) VALUES (?, 0, 0, 0, ?)",
+                    (player_id, now),
+                )
+                btc, plt, gold = 0, 0, 0
+            else:
+                btc, plt, gold = bal_row[0], bal_row[1], bal_row[2]
+
+            if column == "btc":
+                new_btc = max(0, btc + req.amount)
+                new_plt, new_gold = plt, gold
+            elif column == "plt":
+                new_btc, new_plt, new_gold = btc, max(0, plt + req.amount), gold
+            else:
+                new_btc, new_plt, new_gold = btc, plt, max(0, gold + req.amount)
+
+            await db.execute(
+                f"UPDATE economy SET btc = ?, plt = ?, gold = ?, updated_at = ? WHERE player_id = ?",
+                (new_btc, new_plt, new_gold, now, player_id),
+            )
+            await db.execute(
+                "INSERT INTO transactions (id, player_id, currency, amount, reason, reference_id, timestamp) "
+                "VALUES (?, ?, ?, ?, ?, NULL, ?)",
+                (_gen_token_id(), player_id, currency, req.amount, f"admin_currency:{currency}", now),
+            )
+            await _admin_log(db, admin, "currency_update", username, f"{currency}:{req.amount}")
+            await db.commit()
+
+    return {
+        "success": True,
+        "username": username,
+        "currency": currency,
+        "amount": req.amount,
+        "new_balance": {"btc": new_btc, "plt": new_plt, "gold": new_gold}[column],
+        "balance": {"btc": new_btc, "plt": new_plt, "gold": new_gold},
+    }
 
 
 @app.post("/admin/player/{username}/teleport")
