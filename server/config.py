@@ -1,0 +1,43 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+def _get_env(key: str, default: str = "") -> str:
+    return os.environ.get(key, default)
+
+SECRET_KEY: str = _get_env("SECRET_KEY", "")
+ACCESS_TOKEN_EXPIRE_SECONDS: int = int(_get_env("ACCESS_TOKEN_EXPIRE_SECONDS", "900"))
+REFRESH_TOKEN_EXPIRE_SECONDS: int = int(_get_env("REFRESH_TOKEN_EXPIRE_SECONDS", "604800"))
+DB_PATH: str = _get_env(
+    "DB_PATH",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "novagate.db"),
+)
+RATE_LIMIT_LOGIN: str = _get_env("RATE_LIMIT_LOGIN", "5/minute")
+RATE_LIMIT_REGISTER: str = _get_env("RATE_LIMIT_REGISTER", "3/minute")
+
+# Server network config
+SERVER_HOST: str = _get_env("SERVER_HOST", "0.0.0.0")
+SERVER_PORT: int = int(_get_env("SERVER_PORT", _get_env("PORT", "8000")))
+
+# WebSocket world settings
+WORLD_TICK_HZ: int = int(_get_env("WORLD_TICK_HZ", "20"))
+HEARTBEAT_INTERVAL_SECONDS: int = int(_get_env("HEARTBEAT_INTERVAL_SECONDS", "10"))
+HEARTBEAT_TIMEOUT_SECONDS: int = int(_get_env("HEARTBEAT_TIMEOUT_SECONDS", "30"))
+MAP_WIDTH: float = float(_get_env("MAP_WIDTH", "14000"))
+MAP_HEIGHT: float = float(_get_env("MAP_HEIGHT", "10000"))
+MAX_SPEED: float = float(_get_env("MAX_SPEED", "600.0"))
+TICK_RATE: float = float(_get_env("TICK_RATE", "0.05"))
+
+# Admin config
+ADMIN_USERNAME: str = _get_env("ADMIN_USERNAME", "")
+ADMIN_PASSWORD: str = _get_env("ADMIN_PASSWORD", "")
+
+# Online-only mode: when true, clients cannot play without a server session.
+ONLINE_ONLY: bool = str(_get_env("ONLINE_ONLY", "true")).lower() in ("1", "true", "yes", "on")
+
+# Server version
+SERVER_VERSION: str = _get_env("SERVER_VERSION", "1.0.0")
+
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is required")
