@@ -144,6 +144,24 @@ class ConnectionManager:
             await self._kick_locked(player, reason)
             return True
 
+    async def set_company(self, player_id: str, company: str) -> bool:
+        """Mirror a persisted company change onto the LIVE session.
+
+        The database row stays authoritative; this keeps the already-open
+        WebSocket session (and therefore every world_update peer entry, the
+        server-decided relation and the PvP gate) in sync with it, so a player
+        does not have to reconnect to become PvP-eligible.
+
+        Returns True when a connected session was updated.
+        """
+        normalized = str(company or "").strip().upper()
+        async with self._lock:
+            player = self.active_connections.get(player_id)
+            if player is None or player.disconnected:
+                return False
+            player.company = normalized
+            return True
+
     async def connect(self, websocket: WebSocket, token: str) -> Optional[PlayerSession]:
         """Authenticate the WebSocket connection via JWT access token."""
         if not token:
@@ -161,11 +179,12 @@ class ConnectionManager:
         username = payload["username"]
         session_jti = payload.get("session_jti", "")
         company = ""
+        ship_id = SHIP_ID_DEFAULT
 
         async with self._lock:
-            # Verify session is still active
-            if session_jti:
-                async with aiosqlite.connect(self.db_path) as db:
+            async with aiosqlite.connect(self.db_path) as db:
+                # Verify session is still active
+                if session_jti:
                     cursor = await db.execute(
                         "SELECT active, ship_id, expires_at FROM sessions WHERE refresh_jti = ? AND active = 1",
                         (session_jti,),
@@ -179,17 +198,22 @@ class ConnectionManager:
                         return None
                     ship_id = row[1] or SHIP_ID_DEFAULT
 
-                    # Server-authoritative company comes from the DB, never
-                    # from client-provided state.
-                    cursor = await db.execute(
-                        "SELECT company FROM accounts WHERE id = ?",
-                        (account_id,),
-                    )
-                    account_row = await cursor.fetchone()
-                    if account_row and account_row[0]:
-                        company = str(account_row[0]).strip().upper()
-            else:
-                ship_id = SHIP_ID_DEFAULT
+                # Server-authoritative company comes from the DB, never from
+                # client-provided state.
+                #
+                # This read must happen for EVERY authenticated connection, not
+                # only inside the `if session_jti` branch. A token issued by
+                # /auth/refresh carries no session_jti, and that used to skip
+                # this read entirely: the session silently started with
+                # company "" so every peer saw relation "neutral" and
+                # server-authoritative PvP stayed disabled until reconnect.
+                cursor = await db.execute(
+                    "SELECT company FROM accounts WHERE id = ?",
+                    (account_id,),
+                )
+                account_row = await cursor.fetchone()
+                if account_row and account_row[0]:
+                    company = str(account_row[0]).strip().upper()
 
             # ONE ACCOUNT = ONE ACTIVE SESSION.
             # If this player_id already has a live WebSocket (PC session, then
