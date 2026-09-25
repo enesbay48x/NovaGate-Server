@@ -81,6 +81,9 @@ class PlayerSession:
     last_input_time: float = 0.0
     last_fire_time: float = 0.0
     last_heartbeat: float = field(default_factory=time.time)
+    last_seen: float = field(default_factory=time.time)
+    company: str = ""
+    level: int = 1
     connected_at: float = field(default_factory=time.time)
     websocket: WebSocket = None
     disconnected: bool = False
@@ -105,6 +108,42 @@ class ConnectionManager:
         self.secret_key = secret_key
         self.db_path = db_path
 
+    async def _kick_locked(self, player: "PlayerSession", reason: str) -> None:
+        """Kick an existing session (caller must hold self._lock).
+
+        Sends `session_kicked` to the old WebSocket, closes it and marks the
+        session as disconnected so the world loop stops broadcasting to it.
+        """
+        player.disconnected = True
+        if player.ship_id and self.ship_locks.get(player.ship_id) == player.player_id:
+            self.ship_locks.pop(player.ship_id, None)
+        if self.active_connections.get(player.player_id) is player:
+            self.active_connections.pop(player.player_id, None)
+        if player.websocket is None:
+            return
+        try:
+            if player.websocket.application_state == WebSocketState.CONNECTED:
+                await player.websocket.send_text(json.dumps({
+                    "type": "session_kicked",
+                    "reason": reason,
+                }))
+        except Exception:
+            pass
+        try:
+            await player.websocket.close(code=1000, reason=reason)
+        except Exception:
+            pass
+        print(f"[NOVAGATE] session_kicked player_id={player.player_id} reason={reason}", flush=True)
+
+    async def kick(self, player_id: str, reason: str = "account_logged_in_elsewhere") -> bool:
+        """Kick the active WebSocket session of a player (if any)."""
+        async with self._lock:
+            player = self.active_connections.get(player_id)
+            if player is None:
+                return False
+            await self._kick_locked(player, reason)
+            return True
+
     async def connect(self, websocket: WebSocket, token: str) -> Optional[PlayerSession]:
         """Authenticate the WebSocket connection via JWT access token."""
         if not token:
@@ -121,6 +160,7 @@ class ConnectionManager:
         player_id = payload["player_id"]
         username = payload["username"]
         session_jti = payload.get("session_jti", "")
+        company = ""
 
         async with self._lock:
             # Verify session is still active
@@ -138,13 +178,25 @@ class ConnectionManager:
                         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Session expired")
                         return None
                     ship_id = row[1] or SHIP_ID_DEFAULT
-                # Single ship lock
-                existing_player = self.ship_locks.get(ship_id)
-                if existing_player and existing_player != player_id:
-                    await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Ship already in use")
-                    return None
+
+                    # Server-authoritative company comes from the DB, never
+                    # from client-provided state.
+                    cursor = await db.execute(
+                        "SELECT company FROM accounts WHERE id = ?",
+                        (account_id,),
+                    )
+                    account_row = await cursor.fetchone()
+                    if account_row and account_row[0]:
+                        company = str(account_row[0]).strip().upper()
             else:
                 ship_id = SHIP_ID_DEFAULT
+
+            # ONE ACCOUNT = ONE ACTIVE SESSION.
+            # If this player_id already has a live WebSocket (PC session, then
+            # mobile login, etc.) the old session is kicked and closed first.
+            existing_player = self.active_connections.get(player_id)
+            if existing_player is not None and existing_player.websocket is not websocket:
+                await self._kick_locked(existing_player, "account_logged_in_elsewhere")
 
             await websocket.accept()
 
@@ -157,6 +209,7 @@ class ConnectionManager:
                 position_x=0.0,
                 position_y=0.0,
                 websocket=websocket,
+                company=company,
             )
             self.active_connections[player_id] = player
             self.ship_locks[ship_id] = player_id
@@ -165,17 +218,41 @@ class ConnectionManager:
                 await npc_manager.spawn_map_npcs(player.map_id)
             except Exception as e:
                 print(f"[DEBUG] spawn_map_npcs error: {e}", flush=True)
-            print(f"[DEBUG] connect OK: player_id={player_id} ship={ship_id} total={len(self.active_connections)}", flush=True)
+            print(f"[DEBUG] connect OK: player_id={player_id} ship={ship_id} company={company} total={len(self.active_connections)}", flush=True)
             return player
 
-    async def disconnect(self, player_id: str) -> None:
+    async def disconnect(self, player_id: str, websocket: Optional[WebSocket] = None) -> None:
+        """Remove a player session.
+
+        When `websocket` is provided, only the session owned by that exact
+        WebSocket is removed. This prevents a kicked (old) connection's cleanup
+        from deleting the session of the newer, active connection.
+        """
         async with self._lock:
-            player = self.active_connections.pop(player_id, None)
-            if player and player.ship_id:
-                if self.ship_locks.get(player.ship_id) == player_id:
-                    self.ship_locks.pop(player.ship_id, None)
-            if player:
-                player.disconnected = True
+            player = self.active_connections.get(player_id)
+            if player is None:
+                return
+            if websocket is not None and player.websocket is not websocket:
+                # Stale connection: its replacement is already registered.
+                return
+            self.active_connections.pop(player_id, None)
+            if player.ship_id and self.ship_locks.get(player.ship_id) == player_id:
+                self.ship_locks.pop(player.ship_id, None)
+            player.disconnected = True
+
+    async def drop(self, player: "PlayerSession") -> None:
+        """Remove a session whose socket has already failed.
+
+        Only removes the session if the stored entry is still this exact
+        object, so a stale socket can never delete the newer replacement
+        session of the same account.
+        """
+        async with self._lock:
+            if self.active_connections.get(player.player_id) is player:
+                self.active_connections.pop(player.player_id, None)
+            if player.ship_id and self.ship_locks.get(player.ship_id) == player.player_id:
+                self.ship_locks.pop(player.ship_id, None)
+            player.disconnected = True
 
     async def get_nearby_players(self, player_id: str) -> list[PlayerSession]:
         """Return players in the same map within INTEREST_RADIUS."""
@@ -235,8 +312,11 @@ async def world_tick():
                     continue
 
                 # Movement delta
-                dx = player.input_x * MAX_SPEED * TICK_INTERVAL
-                dy = player.input_y * MAX_SPEED * TICK_INTERVAL
+                # Uses the session's own speed (aligned with the client's ship
+                # model, still capped by MAX_SPEED) instead of the raw global
+                # constant, so client and server integrate the same motion.
+                dx = player.input_x * player.speed * TICK_INTERVAL
+                dy = player.input_y * player.speed * TICK_INTERVAL
                 new_x = player.position_x + dx
                 new_y = player.position_y + dy
 
@@ -276,6 +356,17 @@ async def broadcast_world_state():
         state_msg = {
             "type": "world_update",
             "tick_interval": TICK_INTERVAL,
+            # The receiver's OWN authoritative state. `players` below only
+            # carries peers (see get_nearby_players), so without this the
+            # client could never reconcile its local ship with the server
+            # position and range checks would compare two different worlds.
+            "self": {
+                "player_id": player.player_id,
+                "x": round(player.position_x, 2),
+                "y": round(player.position_y, 2),
+                "map_id": player.map_id,
+                "speed": round(player.speed, 2),
+            },
             "players": [],
             "npcs": [],
         }
@@ -283,6 +374,11 @@ async def broadcast_world_state():
             state_msg["players"].append({
                 "player_id": other.player_id,
                 "username": other.username,
+                "company": other.company,
+                # Server-decided relation: the client must not recompute it.
+                "relation": calculate_company_relation(player.company, other.company),
+                "level": other.level,
+                "map_id": other.map_id,
                 "ship_id": other.ship_id,
                 "x": round(other.position_x, 2),
                 "y": round(other.position_y, 2),
@@ -292,7 +388,10 @@ async def broadcast_world_state():
                 "max_shield": round(other.max_shield, 1),
                 "input_x": round(other.input_x, 4),
                 "input_y": round(other.input_y, 4),
+                # Presence metadata: lets the client detect stale/ghost entities.
+                "last_seen": round(other.last_seen, 3),
             })
+            other.last_seen = time.time()
 
         # Add NPC state for NPCs on the same map
         for npc in npc_manager.get_npcs_on_map(player.map_id):
@@ -305,7 +404,9 @@ async def broadcast_world_state():
         try:
             await player.websocket.send_text(json.dumps(state_msg))
         except Exception:
-            player.disconnected = True
+            # Dead socket: remove the session from the world immediately so it
+            # cannot linger as a ghost player.
+            await manager.drop(player)
 
 
 async def start_world_loop():
@@ -329,7 +430,7 @@ async def _send_server_pings():
                 try:
                     await player.websocket.send_text(json.dumps({"type": "ping", "server_time": current_time}))
                 except Exception:
-                    player.disconnected = True
+                    await manager.drop(player)
 
         await asyncio.sleep(HEARTBEAT_INTERVAL)
 
@@ -358,17 +459,26 @@ def register_websocket_routes(app, secret_key: str = "", db_path: str = ""):
                 "y": player.position_y,
                 "ship_id": player.ship_id,
                 "map_id": player.map_id,
+                "player_id": player.player_id,
+                "username": player.username,
+                "company": player.company,
             }))
         except Exception:
             pass
+
+        # Send the initial world snapshot immediately. The world loop will
+        # continue broadcasting subsequent updates after this handshake.
+        await broadcast_world_state()
 
         try:
             while True:
                 try:
                     data = await websocket.receive_text()
                 except Exception:
-                    await manager.disconnect(player.player_id)
+                    await manager.disconnect(player.player_id, websocket)
                     break
+
+                player.last_seen = time.time()
 
                 try:
                     msg = json.loads(data)
@@ -393,6 +503,21 @@ def register_websocket_routes(app, secret_key: str = "", db_path: str = ""):
                         input_y = input_y / mag
                     player.input_x = input_x
                     player.input_y = input_y
+                    # Movement model alignment: the client reports the speed its
+                    # own ship model actually moves at (PlayerShip.max_speed plus
+                    # equipment/skill bonuses). The server integrates that SAME
+                    # value so both sides follow one movement model.
+                    # MAX_SPEED stays the hard anti-cheat ceiling: a client can
+                    # never move faster than it, and omitting "speed" keeps the
+                    # previous MAX_SPEED default.
+                    if "speed" in msg:
+                        try:
+                            requested_speed = float(msg.get("speed", MAX_SPEED))
+                        except (TypeError, ValueError):
+                            requested_speed = MAX_SPEED
+                        if requested_speed != requested_speed:  # NaN guard
+                            requested_speed = MAX_SPEED
+                        player.speed = max(0.0, min(MAX_SPEED, requested_speed))
                     player.last_input_time = time.time()
 
                 elif msg_type == "fire":
@@ -406,14 +531,22 @@ def register_websocket_routes(app, secret_key: str = "", db_path: str = ""):
                     weapon = int(msg.get("weapon", 1))
                     target_x = float(msg.get("target_x", 0.0))
                     target_y = float(msg.get("target_y", 0.0))
+                    target_player_id = str(msg.get("target_player_id", "") or "")
 
-                    combat_event = await npc_manager.handle_fire(
-                        player.player_id,
-                        (player.position_x, player.position_y),
-                        weapon,
-                        target_x,
-                        target_y,
-                    )
+                    combat_event = None
+                    if target_player_id:
+                        # PvP: server-authoritative player-vs-player path.
+                        combat_event = await handle_player_fire(
+                            player, target_player_id, weapon, target_x, target_y
+                        )
+                    else:
+                        combat_event = await npc_manager.handle_fire(
+                            player.player_id,
+                            (player.position_x, player.position_y),
+                            weapon,
+                            target_x,
+                            target_y,
+                        )
                     if combat_event:
                         # Broadcast to nearby players
                         event_with_player = dict(combat_event)
@@ -421,18 +554,31 @@ def register_websocket_routes(app, secret_key: str = "", db_path: str = ""):
                         recipients = await manager.get_nearby_players(player.player_id)
                         if player.player_id not in {recipient.player_id for recipient in recipients}:
                             recipients.append(player)
+                        if "target_id" in event_with_player:
+                            target_session = manager.active_connections.get(str(event_with_player["target_id"]))
+                            if target_session is not None and target_session not in recipients:
+                                recipients.append(target_session)
                         for other in recipients:
                             if other.websocket and other.websocket.application_state == WebSocketState.CONNECTED:
                                 try:
                                     await other.websocket.send_text(json.dumps(event_with_player))
                                 except Exception:
-                                    other.disconnected = True
+                                    await manager.drop(other)
 
                 elif msg_type == "move":
-                    new_map = str(msg.get("map_id", ""))
-                    if new_map:
-                        player.map_id = new_map
-                        await npc_manager.spawn_map_npcs(new_map)
+                    # Server-authoritative map change: only known maps accepted.
+                    new_map = str(msg.get("map_id", "")).strip()
+                    if _is_valid_map_id(new_map):
+                        if new_map != player.map_id:
+                            player.map_id = new_map
+                            await npc_manager.spawn_map_npcs(new_map)
+                        try:
+                            await websocket.send_text(json.dumps({
+                                "type": "map_changed",
+                                "map_id": player.map_id,
+                            }))
+                        except Exception:
+                            player.disconnected = True
 
                 elif msg_type == "heartbeat":
                     player.last_heartbeat = time.time()
@@ -441,7 +587,7 @@ def register_websocket_routes(app, secret_key: str = "", db_path: str = ""):
         except Exception:
             pass
         finally:
-            await manager.disconnect(player.player_id)
+            await manager.disconnect(player.player_id, websocket)
 
     @app.get("/api/session_info")
     async def api_session_info(request: Request):
@@ -465,7 +611,10 @@ def register_websocket_routes(app, secret_key: str = "", db_path: str = ""):
         expires_at = _unix_now() + 3600
 
         if session_jti:
-            async with aiosqlite.connect(db_path) as db:
+            # Always read sessions from the SAME database the live session
+            # manager authenticates against (single source of truth; avoids a
+            # stale import-time path binding).
+            async with aiosqlite.connect(manager.db_path) as db:
                 cursor = await db.execute(
                     "SELECT active, ship_id, expires_at FROM sessions WHERE refresh_jti = ?",
                     (session_jti,),
@@ -641,6 +790,121 @@ SAB_SHIELD_FACTOR = 2.0
 # Combat cooldown settings
 FIRE_COOLDOWN_SECONDS = 0.3  # Minimum time between shots from same player
 MAX_LASER_DAMAGE = 100000.0  # Anti-cheat cap on damage
+
+# Server-authoritative map whitelist (map isolation: players only ever share
+# a map_id that this server recognizes).
+VALID_MAP_IDS: set[str] = (
+    {f"{region}-{n}" for region in (1, 2, 3) for n in range(1, 7)}
+    | {"PVP", "BOSS", "4-5"}
+)
+
+
+def _is_valid_map_id(map_id: str) -> bool:
+    return str(map_id).strip().upper() in {m.upper() for m in VALID_MAP_IDS}
+
+
+def calculate_company_relation(observer_company: str, target_company: str) -> str:
+    """Single server-side authority for company/team relation.
+
+    Used by BOTH the world snapshot (what the client is told) and the PvP
+    validation (who may be shot), so the two can never disagree.
+    """
+    observer = str(observer_company or "").strip().upper()
+    target = str(target_company or "").strip().upper()
+    if not observer or not target:
+        # No company selected on one side: nobody is a valid PvP target.
+        return "neutral"
+    return "friendly" if observer == target else "enemy"
+
+
+async def handle_player_fire(attacker: "PlayerSession", target_player_id: str,
+                             weapon: int, target_x: float, target_y: float) -> Optional[dict]:
+    """Server-authoritative player-vs-player fire.
+
+    Validation order (all checks server-side, client cannot bypass):
+      1. attacker/target session state
+      2. not the same player
+      3. same map (map isolation)
+      4. company relation (same company = friendly, cannot be targeted)
+      5. weapon slot + range (PLAYER_LASER_RANGE)
+      6. damage via the shared weapon damage formula (existing values only)
+
+    Returns a combat event dict, or None when the shot is rejected.
+    """
+    if attacker.disconnected:
+        return None
+    target = manager.active_connections.get(target_player_id)
+    if target is None or target.disconnected:
+        return None
+
+    # 1) Same player can never be a target.
+    if target.player_id == attacker.player_id:
+        return None
+
+    # 2) Map isolation: no cross-map PvP.
+    if target.map_id != attacker.map_id:
+        return None
+
+    # 3) Company relation: same company = friendly, no company = neutral.
+    #    Both are rejected server-side. Only a real enemy company is targetable.
+    if calculate_company_relation(attacker.company, target.company) != "enemy":
+        return None
+
+    # 4) Range check in server space.
+    distance = ((target.position_x - attacker.position_x) ** 2 +
+                (target.position_y - attacker.position_y) ** 2) ** 0.5
+    if distance > PLAYER_LASER_RANGE:
+        return None
+
+    if weapon < 1 or weapon > len(LASER_MULTIPLIERS):
+        return None
+
+    damage = _calculate_laser_damage(weapon, attacker, None, distance)
+    if damage > MAX_LASER_DAMAGE:
+        damage = MAX_LASER_DAMAGE
+
+    event = {
+        "type": "player_hit",
+        "attacker_id": attacker.player_id,
+        "attacker_username": attacker.username,
+        "attacker_company": attacker.company,
+        "target_id": target.player_id,
+        "target_username": target.username,
+        "target_company": target.company,
+        "weapon": weapon,
+        "damage": round(damage, 1),
+        "distance": round(distance, 1),
+    }
+
+    if weapon == 5:
+        # SAB: drains target shield and transfers it to the attacker.
+        drained = min(target.shield, damage)
+        target.shield -= drained
+        attacker.shield = min(attacker.max_shield, attacker.shield + drained)
+        event["shield_drain"] = round(drained, 1)
+    else:
+        # Regular laser: shield first, then HP (existing pipeline).
+        remaining = damage
+        if target.shield > 0:
+            absorbed = min(target.shield, remaining)
+            target.shield -= absorbed
+            remaining -= absorbed
+        if remaining > 0:
+            target.hp -= remaining
+
+    event["target_shield"] = round(target.shield, 1)
+    event["target_hp"] = round(target.hp, 1)
+
+    if target.hp <= 0:
+        # Death + respawn are server decisions; the killed player is restored
+        # to full state so the session keeps living.
+        event["type"] = "player_death"
+        event["target_hp"] = 0.0
+        target.hp = target.max_hp
+        target.shield = target.max_shield
+        event["respawn"] = True
+
+    return event
 
 
 @dataclass
@@ -853,10 +1117,17 @@ class NPCManager:
             # Apply damage
             event = _apply_npc_damage(closest_npc, damage, weapon, player_id, player)
 
-            # If NPC died, persist reward to server economy
+            # If the NPC died, persist reward to server economy FIRST.
+            # If the payout fails the kill is rolled back on the NPC so the
+            # world state and the economy can never disagree, and no reward
+            # event is emitted to any client.
             if event.get("type") == "npc_death" and event.get("reward"):
                 reward = event["reward"]
-                await _grant_server_currency(player_id, reward, closest_npc.npc_type)
+                granted = await _grant_server_currency(player_id, reward, closest_npc.npc_type)
+                if not granted:
+                    _revive_npc_after_failed_reward(closest_npc)
+                    return None
+                event["npc_type"] = closest_npc.npc_type
 
             return event
 
@@ -980,53 +1251,76 @@ def _calculate_npc_reward(npc: NPCState, attacker_id: str) -> dict:
 import aiosqlite as _aiosqlite
 
 
-async def _grant_server_currency(player_id: str, reward: dict, npc_type: str) -> None:
-    """Persist NPC kill reward to server economy table.
+def _revive_npc_after_failed_reward(npc: NPCState) -> None:
+    """Roll an NPC death back when the server-side reward payout failed.
 
-    PlayerSession.account_id maps to accounts.id in the database.
-    We need to find the economy row by player_id.
+    Keeps the authoritative world state and the economy consistent: the player
+    is never told "you killed it" unless the reward was really persisted.
     """
-    btc = reward.get("bitcoin", 0)
-    plt = reward.get("platinum", 0)
+    npc.alive = True
+    npc.respawn_at = 0.0
+    npc.health = npc.max_health
+    npc.shield = npc.max_shield
+
+
+async def _grant_server_currency(player_id: str, reward: dict, npc_type: str) -> bool:
+    """Persist an NPC kill reward to the server economy table.
+
+    Returns True only when the whole payout (economy update + transaction
+    log) committed successfully. A failure is logged and reported as False
+    instead of being silently swallowed, so callers can refuse to hand the
+    reward to the client.
+    """
+    btc = int(reward.get("bitcoin", 0) or 0)
+    plt = int(reward.get("platinum", 0) or 0)
     now = time.time()
 
     try:
         async with _aiosqlite.connect(manager.db_path) as db:
-            async with db.execute("BEGIN IMMEDIATE TRANSACTION"):
-                cursor = await db.execute(
-                    "SELECT btc, plt, gold FROM economy WHERE player_id = ?",
-                    (player_id,),
+            await db.execute("BEGIN IMMEDIATE TRANSACTION")
+            cursor = await db.execute(
+                "SELECT btc, plt, gold FROM economy WHERE player_id = ?",
+                (player_id,),
+            )
+            row = await cursor.fetchone()
+            if row:
+                new_btc = row[0] + btc
+                new_plt = row[1] + plt
+                await db.execute(
+                    "UPDATE economy SET btc = ?, plt = ?, gold = ?, updated_at = ? WHERE player_id = ?",
+                    (new_btc, new_plt, row[2], int(now), player_id),
                 )
-                row = await cursor.fetchone()
-                if row:
-                    new_btc = row[0] + btc
-                    new_plt = row[1] + plt
-                    await db.execute(
-                        "UPDATE economy SET btc = ?, plt = ?, gold = ?, updated_at = ? WHERE player_id = ?",
-                        (new_btc, new_plt, row[2], int(now), player_id),
-                    )
-                else:
-                    await db.execute(
-                        "INSERT INTO economy (player_id, btc, plt, gold, updated_at) VALUES (?, ?, ?, 0, ?)",
-                        (player_id, btc, plt, int(now)),
-                    )
+            else:
+                await db.execute(
+                    "INSERT INTO economy (player_id, btc, plt, gold, updated_at) VALUES (?, ?, ?, 0, ?)",
+                    (player_id, btc, plt, int(now)),
+                )
 
-                if btc != 0:
-                    await db.execute(
-                        "INSERT INTO transactions (id, player_id, currency, amount, reason, reference_id, timestamp) "
-                        "VALUES (?, ?, 'BTC', ?, ?, NULL, ?)",
-                        (f"tx_{now}_{player_id}_btc", player_id, btc, f"npc_kill:{npc_type}", int(now)),
-                    )
-                if plt != 0:
-                    await db.execute(
-                        "INSERT INTO transactions (id, player_id, currency, amount, reason, reference_id, timestamp) "
-                        "VALUES (?, ?, 'PLT', ?, ?, NULL, ?)",
-                        (f"tx_{now}_{player_id}_plt", player_id, plt, f"npc_kill:{npc_type}", int(now)),
-                    )
+            # Reference id must be unique per kill, otherwise a second kill in
+            # the same second would hit the transactions PRIMARY KEY and roll
+            # back the entire payout.
+            reward_ref = f"npc:{npc_type}:{int(now * 1000)}:{player_id}"
+            if btc != 0:
+                await db.execute(
+                    "INSERT INTO transactions (id, player_id, currency, amount, reason, reference_id, timestamp) "
+                    "VALUES (?, ?, 'BTC', ?, ?, NULL, ?)",
+                    (f"tx_{reward_ref}_btc", player_id, btc, f"npc_kill:{npc_type}", int(now)),
+                )
+            if plt != 0:
+                await db.execute(
+                    "INSERT INTO transactions (id, player_id, currency, amount, reason, reference_id, timestamp) "
+                    "VALUES (?, ?, 'PLT', ?, ?, NULL, ?)",
+                    (f"tx_{reward_ref}_plt", player_id, plt, f"npc_kill:{npc_type}", int(now)),
+                )
 
-                await db.commit()
-    except Exception as e:
-        pass  # Non-critical: combat still works without economy sync
+            await db.commit()
+        return True
+    except Exception as exc:  # noqa: BLE001 - payout must never be silent
+        print(
+            f"[NOVAGATE] npc reward FAILED player_id={player_id} npc={npc_type} error={exc}",
+            flush=True,
+        )
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -1036,7 +1330,7 @@ async def on_startup(app, secret_key: str, db_path: str):
     """Called from main.py startup to initialize WebSocket world."""
     manager.configure(secret_key, db_path)
     global _world_task, _ping_task
-    if _world_task is None or _world_task.done():
-        _world_task = asyncio.create_task(world_tick())
-    _ping_task = asyncio.create_task(_send_server_pings())
+    await start_world_loop()
+    if _ping_task is None or _ping_task.done():
+        _ping_task = asyncio.create_task(_send_server_pings())
     print(f"[NOVAGATE] World tick started", flush=True)
