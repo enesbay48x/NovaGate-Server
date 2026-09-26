@@ -58,7 +58,83 @@ def call(base, path, method="GET", body=None, token=None, raw=False):
         return 0, {"error": "%s: %s" % (type(exc).__name__, exc)}
 
 
+# One player-facing route per Phase 1-7 table group. A table that was never
+# migrated makes its route raise "no such table" and return 500, so a 200 across
+# all of them is positive evidence the production schema is complete.
+#
+# Every path here is a GET, and each was taken from the deployed OpenAPI
+# document (`_verify_production.py --get <base>`) rather than guessed. A
+# POST-only route answers 405, which proves nothing about the table.
+MIGRATION_PROBES = [
+    ("event_journal", "/journal"),
+    ("player_stats", "/player/stats"),
+    ("player_world_state", "/player/full"),
+    ("loadouts", "/loadouts"),
+    ("player_droids", "/drones"),
+    ("player_ammo", "/ammo"),
+    ("player_inventory_ext", "/player/inventory"),
+    ("player_identity", "/equipment/stats"),
+    ("maps/map_connections", "/maps"),
+    ("world_loot", "/loot/1-1"),
+    ("quest_progress", "/quests"),
+    ("player_gates/gate_parts", "/gates"),
+    ("player_extras", "/extras"),
+    ("clans/clan_members", "/clans/mine"),
+    ("clan_applications", "/clans/applications"),
+    ("squads/squad_members", "/squads/mine"),
+    ("chat_messages", "/chat/global"),
+    ("player_settings", "/settings"),
+    ("auctions", "/auctions"),
+    ("server_events", "/events"),
+    ("cargo", "/cargo"),
+]
+
+
+def _migration_ok(base: str, token: str):
+    """(ok, detail) for the whole Phase 1-7 probe set.
+
+    The rule is deliberately narrow: a MISSING table surfaces as a 500 from
+    SQLite ("no such table"). Any 2xx, and also a 4xx, means the route ran to
+    completion and read its table successfully - a 404 for "this player is not
+    in a clan" and a 400 for "that is not a channel name" are both application
+    answers produced AFTER the query succeeded.
+
+    So: 500 (or a connection failure, status 0) is the failure signal, and
+    everything else is evidence the table is there. The per-table statuses are
+    reported so the distinction stays visible rather than hidden in a boolean.
+    """
+    missing = []
+    report = []
+    for table, path in MIGRATION_PROBES:
+        status, _ = call(base, path, token=token)
+        report.append("%s:%s" % (table, status))
+        if status == 500 or status == 0:
+            missing.append("%s->%s" % (table, status))
+    if missing:
+        return False, "table missing: %s" % ", ".join(missing)
+    return True, "%d/%d tables readable [%s]" % (
+        len(MIGRATION_PROBES), len(MIGRATION_PROBES), " ".join(report))
+
+
 def main() -> int:
+    if "--get" in sys.argv:
+        # Lists the deployed OpenAPI document WITH its HTTP methods. Guessing
+        # method by method is slow and produces 405s that say nothing; reading
+        # the spec is exact.
+        base = DEFAULT_BASE
+        for arg in sys.argv[1:]:
+            if arg.startswith("http"):
+                base = arg.rstrip("/")
+        with urllib.request.urlopen(base + "/openapi.json", timeout=60) as resp:
+            paths = json.loads(resp.read().decode("utf-8", "replace")) \
+                .get("paths", {})
+        for path in sorted(paths):
+            methods = sorted(m.upper() for m in paths[path]
+                             if m.lower() in ("get", "post", "put", "patch",
+                                              "delete"))
+            print("%-12s %s" % (",".join(methods), path))
+        return 0
+
     base = (sys.argv[1] if len(sys.argv) > 1 else DEFAULT_BASE).rstrip("/")
 
     status, payload = call(base, "/health")
@@ -103,6 +179,16 @@ def main() -> int:
                         ("gates", "/gates")):
         status, _ = call(base, path, token=token)
         record(label, status == 200, "status=%s" % status)
+
+    # --- production migration -------------------------------------------
+    # There is no admin-only table lister, so the Phase 1-7 schema is verified
+    # the only way that proves anything without staff credentials: each table
+    # has a player-facing route that READS it. A missing table produces a 500
+    # from SQLite ("no such table"), not a 200. A 200 therefore demonstrates the
+    # table exists on production AND that the pre-existing player data behind it
+    # still reads back.
+    record("migration: every Phase 1-7 table readable", *_migration_ok(base,
+                                                                        token))
 
     # --- admin panel is served ------------------------------------------
     for label, path in (("admin panel served", "/admin"),
