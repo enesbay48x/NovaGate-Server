@@ -1,0 +1,33 @@
+rank_mini.png
+size: 384, 18
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+reg_bronze
+  rotate: false
+  xy: 0, 0
+  size: 96, 18
+  orig: 96, 18
+  offset: 0, 0
+  index: -1
+reg_common
+  rotate: false
+  xy: 96, 0
+  size: 96, 18
+  orig: 96, 18
+  offset: 0, 0
+  index: -1
+reg_gold
+  rotate: false
+  xy: 192, 0
+  size: 96, 18
+  orig: 96, 18
+  offset: 0, 0
+  index: -1
+reg_silver
+  rotate: false
+  xy: 288, 0
+  size: 96, 18
+  orig: 96, 18
+  offset: 0, 0
+  index: -1

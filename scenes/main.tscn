@@ -1,0 +1,459 @@
+[gd_scene format=3 uid="uid://bptfwoyxd8ubk"]
+[ext_resource type="Script" path="res://scripts/map_manager.gd" id="31_map_manager"]
+
+[ext_resource type="Script" uid="uid://d2i5unm2ahegk" path="res://scripts/main.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/professional_main_menu.gd" id="30_professional_menu"]
+[ext_resource type="Script" uid="uid://bd43lhtsy6v78" path="res://scripts/player_ship.gd" id="2"]
+[ext_resource type="Script" uid="uid://ihr6bsqapbxx" path="res://scripts/droid_manager.gd" id="3_droid_manager"]
+[ext_resource type="Script" uid="uid://bpc5wyeokau8j" path="res://scripts/minimap.gd" id="7"]
+[ext_resource type="Script" uid="uid://c7lo471c7nrpx" path="res://scripts/menu_ui.gd" id="8"]
+[ext_resource type="PackedScene" uid="uid://ddgi8rqy3c4gd" path="res://scenes/combat_hud.tscn" id="9"]
+[ext_resource type="Texture2D" uid="uid://b1pdys7fvky2w" path="res://assets/menu/cpanel/icon.png" id="10_ya4ey"]
+[ext_resource type="PackedScene" path="res://scenes/LaserToggleButton.tscn" id="11_eb6dy"]
+[ext_resource type="Script" uid="uid://dqi02j38cjpe8" path="res://scripts/extra_system.gd" id="17_extra_visuals"]
+[ext_resource type="Texture2D" uid="uid://jahgjomuordx" path="res://assets/ext_slot_shield.png" id="18_2wyq8"]
+[ext_resource type="SpriteFrames" uid="uid://otkiuf5yd0bi" path="res://assets/extras/animations/ema.tres" id="18_extra_ema_frames"]
+[ext_resource type="SpriteFrames" uid="uid://dasp7od0qbjpf" path="res://assets/extras/animations/nukleer.tres" id="19_extra_nukleer_frames"]
+[ext_resource type="Texture2D" uid="uid://da1x40a6xrjql" path="res://assets/ext_slot_nbomb.png" id="19_vxglm"]
+[ext_resource type="Texture2D" uid="uid://cc7ktls3x0gfy" path="res://assets/ext_slot_fastrep.png" id="20_2f3dj"]
+[ext_resource type="SpriteFrames" uid="uid://cyjxyrg5bvj5d" path="res://assets/extras/animations/10luk.tres" id="20_extra_10luk_frames"]
+[ext_resource type="SpriteFrames" uid="uid://c6vjkm5t6hk3d" path="res://assets/extras/animations/enc.tres" id="21_extra_enc_frames"]
+[ext_resource type="Texture2D" uid="uid://dbw3n0sqiwfdl" path="res://assets/ext_slot_entransfer.png" id="21_yq6so"]
+[ext_resource type="SpriteFrames" uid="uid://cwgc8uia0651o" path="res://assets/extras/animations/3saniye.tres" id="22_extra_kalkan_frames"]
+[ext_resource type="Texture2D" uid="uid://blrcwtoq3teqa" path="res://assets/ext_slot_emp.png" id="22_fv21b"]
+[ext_resource type="Texture2D" uid="uid://twuyk52puod6" path="res://assets/rocket1icon.png" id="23_2wyq8"]
+[ext_resource type="Script" uid="uid://bhwyfobhwi122" path="res://scripts/rocket_system.gd" id="23_rocket_system"]
+[ext_resource type="Texture2D" uid="uid://byhxpvfmd4a15" path="res://assets/rocket2icon.png" id="24_vxglm"]
+[ext_resource type="Texture2D" uid="uid://cf45a6vleddp5" path="res://assets/rocket3icon.png" id="25_2f3dj"]
+[ext_resource type="PackedScene" path="res://scenes/mobile_controls.tscn" id="30_mobile_controls"]
+[ext_resource type="Script" path="res://scripts/map_visual_manager.gd" id="12_map_visual"]
+[ext_resource type="Script" path="res://scripts/social_ui_v2.gd" id="40_social_ui"]
+
+[sub_resource type="CircleShape2D" id="1"]
+radius = 38.0
+
+[node name="Main" type="Node2D" unique_id=404497431]
+script = ExtResource("1")
+
+[node name="RocketSystem" type="Node" parent="." unique_id=1055478099]
+script = ExtResource("23_rocket_system")
+
+[node name="Background" type="Sprite2D" parent="." unique_id=842049399]
+scale = Vector2(4, 4)
+
+[node name="World" type="Node2D" parent="." unique_id=1040047995]
+
+[node name="MapVisuals" type="Node2D" parent="World"]
+script = ExtResource("31_map_manager")
+script = ExtResource("12_map_visual")
+
+[node name="Stars" type="Node2D" parent="World" unique_id=1813349366]
+
+[node name="NPCs" type="Node2D" parent="World" unique_id=1818293698]
+
+[node name="Lasers" type="Node2D" parent="World" unique_id=2137537740]
+
+[node name="Rockets" type="Node2D" parent="World" unique_id=1774452015]
+
+[node name="Portals" type="Node2D" parent="World" unique_id=786008459]
+
+[node name="Bases" type="Node2D" parent="World" unique_id=1276311992]
+
+[node name="PlayerShip" type="CharacterBody2D" parent="." unique_id=1944107002 groups=["player"]]
+collision_mask = 0
+script = ExtResource("2")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlayerShip" unique_id=1905001583]
+shape = SubResource("1")
+
+[node name="Visual" type="Node2D" parent="PlayerShip" unique_id=1901901345]
+
+[node name="EngineFlames" type="Node2D" parent="PlayerShip/Visual" unique_id=879124958]
+
+[node name="Flame0" type="Polygon2D" parent="PlayerShip/Visual/EngineFlames" unique_id=376079265]
+color = Color(0.15, 0.72, 1, 0.72)
+polygon = PackedVector2Array(0, -5, -28, 0, 0, 5, 8, 0)
+
+[node name="Flame1" type="Polygon2D" parent="PlayerShip/Visual/EngineFlames" unique_id=2026979588]
+color = Color(0.15, 0.72, 1, 0.72)
+polygon = PackedVector2Array(0, -5, -28, 0, 0, 5, 8, 0)
+
+[node name="Flame2" type="Polygon2D" parent="PlayerShip/Visual/EngineFlames" unique_id=659650754]
+color = Color(1, 0.32, 0.08, 0.7)
+polygon = PackedVector2Array(0, -4, -24, 0, 0, 4, 7, 0)
+
+[node name="ExtraEffects" type="Node2D" parent="PlayerShip" unique_id=1650302634]
+
+[node name="NukleerEffect" type="AnimatedSprite2D" parent="PlayerShip/ExtraEffects" unique_id=1697695835]
+visible = false
+z_index = -1
+scale = Vector2(1.35, 1.35)
+sprite_frames = ExtResource("19_extra_nukleer_frames")
+
+[node name="EMAEffect" type="AnimatedSprite2D" parent="PlayerShip/ExtraEffects" unique_id=1646883444]
+visible = false
+z_index = 20
+scale = Vector2(0.5, 0.5)
+sprite_frames = ExtResource("18_extra_ema_frames")
+
+[node name="OnlukEffect" type="AnimatedSprite2D" parent="PlayerShip/ExtraEffects" unique_id=950108406]
+visible = false
+z_index = 20
+scale = Vector2(0.5, 0.5)
+sprite_frames = ExtResource("20_extra_10luk_frames")
+
+[node name="ENCEffect" type="AnimatedSprite2D" parent="PlayerShip/ExtraEffects" unique_id=785019997]
+visible = false
+z_index = 20
+scale = Vector2(0.9, 0.9)
+sprite_frames = ExtResource("21_extra_enc_frames")
+
+[node name="Kalkan3SnEffect" type="AnimatedSprite2D" parent="PlayerShip/ExtraEffects" unique_id=390462312]
+visible = false
+z_index = 20
+scale = Vector2(0.85, 0.85)
+sprite_frames = ExtResource("22_extra_kalkan_frames")
+
+[node name="Drones" type="Node2D" parent="PlayerShip" unique_id=1595525997]
+script = ExtResource("3_droid_manager")
+
+[node name="Camera2D" type="Camera2D" parent="PlayerShip" unique_id=154164252]
+zoom = Vector2(0.6, 0.6)
+limit_enabled = false
+position_smoothing_enabled = true
+position_smoothing_speed = 6.0
+
+[node name="SafeZoneLabel" type="Label" parent="PlayerShip" unique_id=1545239236]
+offset_left = -76.0
+offset_top = -105.0
+offset_right = 76.0
+offset_bottom = -76.0
+theme_override_colors/font_color = Color(0.2, 1, 0.55, 1)
+theme_override_font_sizes/font_size = 18
+text = "GÜVENLİ BÖLGE"
+horizontal_alignment = 1
+
+[node name="Health" type="ProgressBar" parent="PlayerShip" unique_id=275648607]
+visible = false
+offset_left = -35.0
+offset_top = -45.0
+offset_right = 35.0
+offset_bottom = -18.0
+max_value = 1000.0
+value = 1000.0
+
+[node name="Shield" type="ProgressBar" parent="PlayerShip" unique_id=1650186416]
+visible = false
+offset_left = -35.0
+offset_top = -36.0
+offset_right = 35.0
+offset_bottom = -9.0
+max_value = 800.0
+value = 800.0
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1166854163]
+
+[node name="Minimap" type="Control" parent="HUD" unique_id=1115744451]
+layout_mode = 3
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -230.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 165.0
+grow_horizontal = 0
+mouse_default_cursor_shape = 2
+script = ExtResource("7")
+player_path = NodePath("../../PlayerShip")
+npc_container_path = NodePath("../../World/NPCs")
+
+[node name="TopPanel" type="Panel" parent="HUD" unique_id=641828766]
+offset_left = 18.0
+offset_top = 18.0
+offset_right = 550.0
+offset_bottom = 70.0
+
+[node name="MapLabel" type="Label" parent="HUD/TopPanel" unique_id=234916159]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 15.0
+offset_right = 140.0
+offset_bottom = 40.0
+text = "NOVA-01 / 20"
+
+[node name="CoordLabel" type="Label" parent="HUD/TopPanel" unique_id=1032254757]
+layout_mode = 0
+offset_left = 160.0
+offset_top = 15.0
+offset_right = 340.0
+offset_bottom = 40.0
+text = "X: 0000 Y: 0000"
+
+[node name="AmmoLabel" type="Label" parent="HUD/TopPanel" unique_id=96807744]
+layout_mode = 0
+offset_left = 370.0
+offset_top = 15.0
+offset_right = 510.0
+offset_bottom = 40.0
+text = "Aktif Mühimmat: RLX-1"
+
+[node name="BottomPanel" type="Panel" parent="HUD" unique_id=511179170]
+visible = false
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -1280.0
+offset_top = -720.0
+offset_right = -1280.0
+offset_bottom = -720.0
+
+[node name="Health" type="ProgressBar" parent="HUD/BottomPanel" unique_id=1622426259]
+visible = false
+layout_mode = 0
+offset_left = 15.0
+offset_top = 14.0
+offset_right = 135.0
+offset_bottom = 41.0
+
+[node name="Shield" type="ProgressBar" parent="HUD/BottomPanel" unique_id=383580573]
+visible = false
+layout_mode = 0
+offset_left = 15.0
+offset_top = 48.0
+offset_right = 315.0
+offset_bottom = 75.0
+
+[node name="WarpPanel" type="Panel" parent="HUD" unique_id=499749583]
+visible = false
+self_modulate = Color(0, 0, 0, 0)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -150.0
+offset_top = -42.0
+offset_right = 150.0
+offset_bottom = 42.0
+
+[node name="WarpLabel" type="Label" parent="HUD/WarpPanel" unique_id=81673094]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_font_sizes/font_size = 22
+text = "HARİTA GEÇİŞİ  2.0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MenuRoot" type="Control" parent="HUD" unique_id=1189839503]
+process_mode = 3
+z_index = 100
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("8")
+
+[node name="MainMenuPanel" type="Control" parent="HUD/MenuRoot" unique_id=1072270731]
+z_index = 100
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="ProfessionalMainMenu" type="Control" parent="HUD/MenuRoot"]
+visible = false
+z_index = 200
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("30_professional_menu")
+
+[node name="LaserToggleButton" parent="HUD" unique_id=565000471 instance=ExtResource("11_eb6dy")]
+z_index = 10
+offset_left = 1150.0
+offset_top = 300.0
+offset_right = 1270.0
+offset_bottom = 420.0
+scale = Vector2(2, 2)
+texture_normal = ExtResource("10_ya4ey")
+
+[node name="LaserPanel" type="Panel" parent="HUD/LaserToggleButton" unique_id=1386392379]
+visible = false
+custom_maximum_size = Vector2(80, 150)
+layout_mode = 0
+offset_top = 45.0
+offset_right = 60.0
+offset_bottom = 195.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HUD/LaserToggleButton/LaserPanel" unique_id=54096050]
+custom_minimum_size = Vector2(50, 180)
+layout_mode = 0
+offset_right = 80.0
+offset_bottom = 250.0
+theme_override_constants/separation = 5
+
+[node name="x1" type="Button" parent="HUD/LaserToggleButton/LaserPanel/VBoxContainer" unique_id=1217129003]
+custom_minimum_size = Vector2(40, 10)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme_override_font_sizes/font_size = 9
+text = "x1
+"
+
+[node name="x2" type="Button" parent="HUD/LaserToggleButton/LaserPanel/VBoxContainer" unique_id=1613031993]
+custom_minimum_size = Vector2(40, 10)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme_override_font_sizes/font_size = 9
+text = "x2"
+
+[node name="x3" type="Button" parent="HUD/LaserToggleButton/LaserPanel/VBoxContainer" unique_id=1396636046]
+custom_minimum_size = Vector2(40, 10)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme_override_font_sizes/font_size = 9
+text = "x3"
+
+[node name="x4" type="Button" parent="HUD/LaserToggleButton/LaserPanel/VBoxContainer" unique_id=1465718817]
+custom_minimum_size = Vector2(40, 10)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme_override_font_sizes/font_size = 9
+text = "x4"
+
+[node name="SAB" type="Button" parent="HUD/LaserToggleButton/LaserPanel/VBoxContainer" unique_id=663185761]
+custom_minimum_size = Vector2(40, 10)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme_override_font_sizes/font_size = 9
+text = "SAB"
+
+[node name="RSB" type="Button" parent="HUD/LaserToggleButton/LaserPanel/VBoxContainer" unique_id=581658352]
+custom_minimum_size = Vector2(40, 10)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme_override_font_sizes/font_size = 9
+text = "RSB"
+
+[node name="ExtraHUD" type="Control" parent="HUD" unique_id=360997331]
+z_index = 10
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("17_extra_visuals")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HUD/ExtraHUD" unique_id=968404947]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -160.0
+offset_top = -54.0
+offset_right = 160.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 4
+
+[node name="EMAButton" type="TextureButton" parent="HUD/ExtraHUD/HBoxContainer" unique_id=450692850]
+custom_minimum_size = Vector2(35, 35)
+layout_mode = 2
+tooltip_text = "EMA"
+texture_normal = ExtResource("18_2wyq8")
+stretch_mode = 0
+
+[node name="NukleerButton" type="TextureButton" parent="HUD/ExtraHUD/HBoxContainer" unique_id=687903277]
+custom_minimum_size = Vector2(35, 35)
+layout_mode = 2
+tooltip_text = "Nükleer"
+texture_normal = ExtResource("19_vxglm")
+stretch_mode = 0
+
+[node name="OnlukButton" type="TextureButton" parent="HUD/ExtraHUD/HBoxContainer" unique_id=1648328954]
+custom_minimum_size = Vector2(35, 35)
+layout_mode = 2
+tooltip_text = "10'luk"
+texture_normal = ExtResource("20_2f3dj")
+stretch_mode = 0
+
+[node name="ENCButton" type="TextureButton" parent="HUD/ExtraHUD/HBoxContainer" unique_id=1683170572]
+custom_minimum_size = Vector2(35, 35)
+layout_mode = 2
+tooltip_text = "ENC"
+texture_normal = ExtResource("21_yq6so")
+stretch_mode = 0
+
+[node name="Kalkan3SnButton" type="TextureButton" parent="HUD/ExtraHUD/HBoxContainer" unique_id=642244705]
+custom_minimum_size = Vector2(35, 35)
+layout_mode = 2
+tooltip_text = "3 Saniyelik Kalkan"
+texture_normal = ExtResource("22_fv21b")
+stretch_mode = 0
+
+[node name="R1Button" type="TextureButton" parent="HUD/ExtraHUD/HBoxContainer" unique_id=2019122642]
+custom_minimum_size = Vector2(35, 35)
+propagate_maximum_size = true
+clip_contents = true
+layout_mode = 2
+tooltip_text = "R1 | Hasar: 800-1000 | 1 sn"
+button_mask = 0
+texture_normal = ExtResource("23_2wyq8")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="R2Button" type="TextureButton" parent="HUD/ExtraHUD/HBoxContainer" unique_id=224559580]
+custom_minimum_size = Vector2(35, 35)
+propagate_maximum_size = true
+clip_contents = true
+layout_mode = 2
+tooltip_text = "R2 | Hasar: 1800-2000 | 1 sn"
+button_mask = 0
+texture_normal = ExtResource("24_vxglm")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="R3Button" type="TextureButton" parent="HUD/ExtraHUD/HBoxContainer" unique_id=1618223856]
+custom_minimum_size = Vector2(35, 35)
+layout_mode = 2
+tooltip_text = "R3 | Hasar: 3800-4000 | 0.5 sn | İzli"
+texture_normal = ExtResource("25_2f3dj")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="MobileControls" parent="HUD" unique_id=589822476 instance=ExtResource("30_mobile_controls")]
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CombatHUD" parent="." unique_id=1662430696 instance=ExtResource("9")]
+
+[node name="SocialUI" type="CanvasLayer" parent="." unique_id=4001112223]
+script = ExtResource("40_social_ui")
+
+[connection signal="pressed" from="HUD/LaserToggleButton/LaserPanel/VBoxContainer/x1" to="." method="_on_x1_pressed"]
+[connection signal="pressed" from="HUD/LaserToggleButton/LaserPanel/VBoxContainer/x2" to="." method="_on_x2_pressed"]
+[connection signal="pressed" from="HUD/LaserToggleButton/LaserPanel/VBoxContainer/x3" to="." method="_on_x3_pressed"]
+[connection signal="pressed" from="HUD/LaserToggleButton/LaserPanel/VBoxContainer/x4" to="." method="_on_x4_pressed"]
+[connection signal="pressed" from="HUD/LaserToggleButton/LaserPanel/VBoxContainer/SAB" to="." method="_on_sab_pressed"]
+[connection signal="pressed" from="HUD/LaserToggleButton/LaserPanel/VBoxContainer/RSB" to="." method="_on_rsb_pressed"]

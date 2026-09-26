@@ -1,0 +1,146 @@
+
+bonusbox.png
+size: 2048, 128
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+02
+  rotate: false
+  xy: 2, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+04
+  rotate: false
+  xy: 101, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+06
+  rotate: false
+  xy: 200, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+08
+  rotate: false
+  xy: 299, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+10
+  rotate: false
+  xy: 398, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+12
+  rotate: false
+  xy: 497, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+14
+  rotate: false
+  xy: 596, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+16
+  rotate: false
+  xy: 695, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+18
+  rotate: false
+  xy: 794, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+20
+  rotate: false
+  xy: 893, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+22
+  rotate: false
+  xy: 992, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+24
+  rotate: false
+  xy: 1091, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+26
+  rotate: false
+  xy: 1190, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+28
+  rotate: false
+  xy: 1289, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+30
+  rotate: false
+  xy: 1388, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+32
+  rotate: false
+  xy: 1487, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+34
+  rotate: false
+  xy: 1586, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+36
+  rotate: false
+  xy: 1685, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+38
+  rotate: false
+  xy: 1784, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1
+40
+  rotate: false
+  xy: 1883, 4
+  size: 97, 97
+  orig: 97, 97
+  offset: 0, 0
+  index: -1

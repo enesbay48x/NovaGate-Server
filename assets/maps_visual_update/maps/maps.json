@@ -1,0 +1,1550 @@
+{
+  "predefinedLayers": [
+    {
+      "name": "stars",
+      "path": "common/",
+      "offsetRatio": 0.1,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "asteroids1",
+      "path": "common/",
+      "offsetRatio": 0.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "asteroids2",
+      "path": "common/",
+      "offsetRatio": 0.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "asteroids3",
+      "path": "common/",
+      "offsetRatio": 0.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "dust1",
+      "path": "common/",
+      "onTop": false,
+      "offsetRatio": 1.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "dust3",
+      "path": "common/",
+      "onTop": false,
+      "offsetRatio": 1.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "dust4",
+      "path": "common/",
+      "onTop": false,
+      "offsetRatio": 1.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "dust5",
+      "path": "common/",
+      "onTop": false,
+      "offsetRatio": 1.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "dust6",
+      "path": "common/",
+      "onTop": false,
+      "offsetRatio": 1.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "dust7",
+      "path": "common/",
+      "onTop": false,
+      "offsetRatio": 1.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "dust_blue1",
+      "path": "common/",
+      "onTop": false,
+      "offsetRatio": 1.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "dust_blue2",
+      "path": "common/",
+      "onTop": false,
+      "offsetRatio": 1.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "dust_blue3",
+      "path": "common/",
+      "onTop": false,
+      "offsetRatio": 1.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "dust_blue4",
+      "path": "common/",
+      "onTop": false,
+      "offsetRatio": 1.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "cloud_big1",
+      "path": "common/",
+      "onTop": false,
+      "offsetRatio": 1.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "dust_big",
+      "path": "common/",
+      "onTop": false,
+      "offsetRatio": 1.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "dust_red1",
+      "path": "common/",
+      "onTop": false,
+      "offsetRatio": 1.5,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "bg_dust",
+      "path": "common/",
+      "onTop": false,
+      "offsetRatio": 0.15,
+      "inPreview": false,
+      "stretch": true
+    },
+    {
+      "name": "fractal_dust",
+      "path": "common/",
+      "onTop": false,
+      "offsetRatio": 0.15,
+      "inPreview": false,
+      "stretch": false
+    },
+    {
+      "name": "red1",
+      "path": "asteroids/",
+      "onTop": false,
+      "offsetRatio": 0.15,
+      "inPreview": true,
+      "stretch": false
+    },
+    {
+      "name": "red2",
+      "path": "asteroids/",
+      "onTop": false,
+      "offsetRatio": 0.15,
+      "inPreview": true,
+      "stretch": false
+    },
+    {
+      "name": "blue1",
+      "path": "asteroids/",
+      "onTop": false,
+      "offsetRatio": 0.15,
+      "inPreview": true,
+      "stretch": false
+    },
+    {
+      "name": "blue2",
+      "path": "asteroids/",
+      "onTop": false,
+      "offsetRatio": 0.15,
+      "inPreview": true,
+      "stretch": false
+    }
+  ],
+  "list": [
+    {
+      "id": 0,
+      "name": "U-1",
+      "alias": "u1",
+      "layers": [
+        {
+          "predefined": "stars"
+        },
+        {
+          "name": "planet2",
+          "offsetRatio": 0.2,
+          "posX": 0.68,
+          "posY": 0.68
+        },
+        {
+          "name": "station",
+          "offsetRatio": 0.2,
+          "posX": 0.18,
+          "posY": 0.31
+        },
+        {
+          "name": "mainstar",
+          "offsetRatio": 0.55
+        },
+        {
+          "predefined": "asteroids2",
+          "offsetRatio": 0.65
+        },
+        {
+          "name": "cloud",
+          "offsetRatio": 0.7
+        },
+        {
+          "name": "planet1",
+          "offsetRatio": 0.8,
+          "posX": 0.3,
+          "posY": 0.52
+        },
+        {
+          "name": "cloud2",
+          "offsetRatio": 0.8
+        },
+        {
+          "name": "planet3",
+          "offsetRatio": 1.25,
+          "posX": 0.72,
+          "posY": 0.28
+        },
+        {
+          "name": "rock1",
+          "offsetRatio": 1.325,
+          "posX": 0.20,
+          "posY": 0.66
+        },
+        {
+          "predefined": "dust3"
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 2.25
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "R-1",
+      "alias": "r1",
+      "layers": [
+        {
+          "name": "nebula",
+          "offsetRatio": -0.58
+        },
+        {
+          "predefined": "stars",
+          "offsetRatio": -0.5
+        },
+        {
+          "name": "sol",
+          "offsetRatio": -0.48,
+          "posX": 0.23,
+          "posY": 0.35
+        },
+        {
+          "name": "planet",
+          "offsetRatio": -0.35,
+          "scale": 0.8,
+          "posX": 0.92,
+          "posY": 0.9
+        },
+        {
+          "predefined": "asteroids2",
+          "offsetRatio": 0.05
+        },
+        {
+          "name": "planet2",
+          "offsetRatio": 0.1,
+          "scale": 0.8,
+          "posX": 0.65,
+          "posY": 0.6
+        },
+        {
+          "name": "station",
+          "offsetRatio": 0.2,
+          "posX": 0.9,
+          "posY": 0.28
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 0.45
+        },
+        {
+          "predefined": "dust3",
+          "offsetRatio": 1.85
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "E-1",
+      "alias": "e1",
+      "layers": [
+        {
+          "name": "cloud",
+          "offsetRatio": -0.55
+        },
+        {
+          "name": "clouds_bg",
+          "offsetRatio": 0.1
+        },
+        {
+          "name": "planet",
+          "offsetRatio": 0.3,
+          "scale": 1.5
+        },
+        {
+          "name": "station",
+          "offsetRatio": 0.4,
+          "posX": 0.54,
+          "posY": 0.72
+        },
+        {
+          "name": "clouds_top",
+          "offsetRatio": 0.5,
+          "scale": 1.5,
+          "posY": 0.42
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 0.75
+        },
+        {
+          "predefined": "dust3",
+          "offsetRatio": 1.85
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "U-2",
+      "alias": "u2",
+      "layers": [
+        {
+          "predefined": "stars",
+          "offsetRatio": -0.3
+        },
+        {
+          "name": "vega_system",
+          "offsetRatio": -0.2,
+          "posX": 0.26,
+          "posY": 0.3
+        },
+        {
+          "name": "flare",
+          "offsetRatio": 0.1,
+          "posX": 0.69,
+          "posY": 0.76
+        },
+        {
+          "name": "objects",
+          "offsetRatio": 0.2,
+          "posX": 0.2,
+          "posY": 0.8
+        },
+        {
+          "name": "planet",
+          "offsetRatio": 0.3
+        },
+        {
+          "predefined": "blue2",
+          "offsetRatio": 0.4,
+          "posX": 0.75,
+          "posY": 0.29
+        },
+        {
+          "predefined": "asteroids3",
+          "offsetRatio": 0.55
+        },
+        {
+          "predefined": "dust3",
+          "onTop": true,
+          "offsetRatio": 0.7
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 2.25
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "R-2",
+      "alias": "r2",
+      "layers": [
+        {
+          "name": "mist",
+          "offsetRatio": -0.46
+        },
+        {
+          "name": "rocks1",
+          "offsetRatio": -0.4
+        },
+        {
+          "name": "rocks2",
+          "offsetRatio": -0.25
+        },
+        {
+          "predefined": "asteroids2",
+          "offsetRatio": 0.1
+        },
+        {
+          "name": "rocks3",
+          "offsetRatio": 0.2
+        },
+        {
+          "predefined": "asteroids3",
+          "offsetRatio": 0.4
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 1.1
+        },
+        {
+          "predefined": "dust3",
+          "offsetRatio": 2.8
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "E-2",
+      "alias": "e2",
+      "layers": [
+        {
+          "name": "rocks1",
+          "offsetRatio": -0.2,
+          "stretch": false,
+          "posX": 0.2,
+          "posY": 0.7
+        },
+        {
+          "name": "rocks2",
+          "offsetRatio": -0.1,
+          "stretch": false,
+          "posX": 0.8,
+          "posY": 0.6
+        },
+        {
+          "predefined": "stars"
+        },
+        {
+          "predefined": "dust_blue3",
+          "offsetRatio": 0.1
+        },
+        {
+          "onTop": false,
+          "name": "planet",
+          "ext": "png",
+          "offsetRatio": 0.2,
+          "posX": 0.7,
+          "posY": 0.3
+        },
+        {
+          "predefined": "dust7",
+          "offsetRatio": 1
+        },
+        {
+          "name": "sat2",
+          "offsetRatio": 2.2,
+          "posX": 0.6,
+          "posY": 0.25
+        },
+        {
+          "predefined": "dust3",
+          "offsetRatio": 3.2
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 3.85
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "U-3",
+      "alias": "u3",
+      "layers": [
+        {
+          "predefined": "dust3",
+          "offsetRatio": -0.3,
+          "stretch": false
+        },
+        {
+          "predefined": "stars",
+          "offsetRatio": -0.3
+        },
+        {
+          "name": "flare",
+          "offsetRatio": 0.1,
+          "posX": 0.8,
+          "posY": 0.8
+        },
+        {
+          "name": "planet",
+          "offsetRatio": 0.2,
+          "posX": 0.3,
+          "posY": 0.35
+        },
+        {
+          "name": "planet2",
+          "offsetRatio": 0.32,
+          "posX": 0.4,
+          "posY": 0.45
+        },
+        {
+          "name": "asteroids",
+          "offsetRatio": 0.5,
+          "posX": 0.7,
+          "posY": 0.38
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 0.9
+        },
+        {
+          "predefined": "dust3",
+          "offsetRatio": 2.8
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "R-3",
+      "maxWidth": 2350,
+      "hasMainBackground": false,
+      "alias": "r3",
+      "layers": [
+        {
+          "name": "bg",
+          "ext": "jpg",
+          "offsetRatio": -0.7
+        },
+        {
+          "predefined": "stars",
+          "offsetRatio": -0.5,
+          "scale": 2
+        },
+        {
+          "name": "cloud_far",
+          "offsetRatio": -0.55
+        },
+        {
+          "name": "star_red",
+          "offsetRatio": -0.69,
+          "posX": -0.6,
+          "posY": -0.3,
+          "scale": 1.3,
+          "rotation": true
+        },
+        {
+          "name": "star_red2",
+          "offsetRatio": -0.69,
+          "posX": 1.5,
+          "posY": 0,
+          "scale": 1.5,
+          "rotation": true,
+          "rotationSpeed": -1
+        },
+        {
+          "name": "planet",
+          "offsetRatio": -0.57,
+          "posX": 0.5,
+          "posY": 0.9,
+          "scale": 1.3
+        },
+        {
+          "predefined": "asteroids3",
+          "offsetRatio": -0.25
+        },
+        {
+          "name": "cloud_near",
+          "offsetRatio": 0.2
+        },
+        {
+          "predefined": "red1",
+          "offsetRatio": 0.8,
+          "posX": 0.26,
+          "posY": 0.65,
+          "scale": 0.5
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 0.9
+        },
+        {
+          "predefined": "dust3",
+          "offsetRatio": 2.5
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "E-3",
+      "alias": "e3",
+      "layers": [
+        {
+          "predefined": "stars"
+        },
+        {
+          "name": "smoke3",
+          "offsetRatio": 0.15,
+          "posX": 0.82,
+          "posY": 0.48
+        },
+        {
+          "name": "sat1",
+          "offsetRatio": 0.3,
+          "posX": 0.83,
+          "posY": 0.5
+        },
+        {
+          "name": "smoke4",
+          "offsetRatio": 0.425,
+          "posX": 0.79,
+          "posY": 0.38
+        },
+        {
+          "name": "planet",
+          "offsetRatio": 0.5,
+          "posX": 0.75,
+          "posY": 0.3
+        },
+        {
+          "name": "smoke1",
+          "offsetRatio": 0.55,
+          "posX": 0.67,
+          "posY": 0.26,
+          "scale": 1.3
+        },
+        {
+          "name": "sat2",
+          "offsetRatio": 0.7,
+          "posX": 0.65,
+          "posY": 0.22
+        },
+        {
+          "name": "smoke2",
+          "offsetRatio": 0.85,
+          "posX": 0.62,
+          "posY": 0.20
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 0.9
+        },
+        {
+          "predefined": "dust3",
+          "offsetRatio": 4.2
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "J-VO",
+      "alias": "jvo",
+      "scale": 1.5,
+      "layers": [
+        {
+          "name": "planet1",
+          "offsetRatio": -0.55,
+          "posX": 0.90,
+          "posY": 0.1
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 0.9
+        },
+        {
+          "predefined": "dust3"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "J-VS",
+      "alias": "jvs",
+      "layers": [
+        {
+          "predefined": "stars"
+        },
+        {
+          "name": "smoke2",
+          "offsetRatio": 0.35
+        },
+        {
+          "name": "planet",
+          "offsetRatio": 0.52,
+          "posX": 0.72,
+          "posY": 0.41
+        },
+        {
+          "name": "smoke3",
+          "offsetRatio": 0.68
+        },
+        {
+          "predefined": "dust4",
+          "offsetRatio": 0.7
+        },
+        {
+          "name": "smoke1",
+          "offsetRatio": 0.8,
+          "posX": 0.29,
+          "posY": 0.68
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 0.9
+        },
+        {
+          "predefined": "dust3"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "name": "J-SO",
+      "alias": "jso",
+      "layers": [
+        {
+          "predefined": "stars",
+          "offsetRatio": -0.5,
+          "scale": 2
+        },
+        {
+          "name": "planet",
+          "offsetRatio": 0.5,
+          "posX": 0.8,
+          "posY": 0.7
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 0.9
+        },
+        {
+          "predefined": "dust3"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "name": "T-1",
+      "alias": "t1",
+      "scale": 2,
+      "layers": [
+        {
+          "predefined": "stars",
+          "offsetRatio": 0.1
+        },
+        {
+          "name": "planet",
+          "offsetRatio": 0.3,
+          "fluctuation": true
+        },
+        {
+          "predefined": "asteroids3",
+          "stretch": false
+        },
+        {
+          "predefined": "dust3"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "name": "U-5",
+      "alias": "u5",
+      "layers": [
+        {
+          "name": "star1",
+          "offsetRatio": 0.095,
+          "posX": 0.85,
+          "posY": 0.85
+        },
+        {
+          "name": "stardust",
+          "offsetRatio": 0.1,
+          "posX": 0.68,
+          "posY": 0.76
+        },
+        {
+          "name": "planet1",
+          "offsetRatio": 0.15,
+          "posX": 0.62,
+          "posY": 0.6
+        },
+        {
+          "name": "rocks_close",
+          "offsetRatio": 0.18,
+          "posX": 0.3,
+          "posY": 0.3
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 1.5
+        },
+        {
+          "predefined": "dust3",
+          "offsetRatio": 5.5
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "name": "R-5",
+      "alias": "r5",
+      "layers": [
+        {
+          "name": "planet",
+          "offsetRatio": -0.6,
+          "posX": 0.3,
+          "posY": 0.7,
+          "scale": 0.75
+        },
+        {
+          "name": "sat",
+          "offsetRatio": -0.69,
+          "posX": 1.16,
+          "posY": 1.15
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 0.5
+        },
+        {
+          "predefined": "dust3",
+          "offsetRatio": 1.2
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "name": "E-5",
+      "alias": "e5",
+      "layers": [
+        {
+          "predefined": "stars",
+          "offsetRatio": -0.4
+        },
+        {
+          "name": "moon1",
+          "offsetRatio": 0,
+          "posX": 0.42,
+          "posY": 0.58
+        },
+        {
+          "name": "star",
+          "offsetRatio": -0.1,
+          "posX": 0.75,
+          "posY": 0.55
+        },
+        {
+          "name": "planet1",
+          "offsetRatio": 0.5,
+          "posX": 0.45,
+          "posY": 0.45
+        },
+        {
+          "name": "moon2",
+          "offsetRatio": 1.5,
+          "posX": 0.6,
+          "posY": 0.34
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 1.6
+        },
+        {
+          "predefined": "dust3",
+          "offsetRatio": 5
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "name": "U-6",
+      "alias": "u6",
+      "layers": [
+        {
+          "predefined": "stars"
+        },
+        {
+          "name": "planet",
+          "offsetRatio": 0.3
+        },
+        {
+          "predefined": "asteroids2"
+        },
+        {
+          "predefined": "dust3"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "name": "R-6",
+      "alias": "r6",
+      "layers": [
+        {
+          "name": "red_mist",
+          "offsetRatio": -0.2,
+          "inPreview": false
+        },
+        {
+          "name": "broken_rocks",
+          "offsetRatio": -0.05,
+          "posX": 0.42,
+          "posY": 0.58
+        },
+        {
+          "name": "red_dust",
+          "offsetRatio": 0.25,
+          "inPreview": false,
+          "stretch": true
+        },
+        {
+          "name": "red_mist2",
+          "offsetRatio": 1.6,
+          "inPreview": false,
+          "posX": 0.65,
+          "posY": 0.4
+        },
+        {
+          "name": "broken_planet",
+          "offsetRatio": 2,
+          "posX": 0.63,
+          "posY": 0.38
+        },
+        {
+          "name": "rocks",
+          "offsetRatio": 2.2,
+          "posX": 0.62,
+          "posY": 0.37
+        },
+        {
+          "name": "broken_sat",
+          "offsetRatio": 2.3,
+          "posX": 0.61,
+          "posY": 0.36
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 4
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "name": "E-6",
+      "alias": "e6",
+      "layers": [
+        {
+          "predefined": "dust4",
+          "offsetRatio": -0.25,
+          "stretch": false
+        },
+        {
+          "predefined": "stars"
+        },
+        {
+          "name": "Broken_station",
+          "offsetRatio": 0.25,
+          "posX": 0.76,
+          "posY": 0.8
+        },
+        {
+          "predefined": "dust5",
+          "offsetRatio": 0.5
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 4
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "name": "U-7",
+      "alias": "u7",
+      "layers": [
+        {
+          "predefined": "dust1",
+          "offsetRatio": -0.3,
+          "stretch": false
+        },
+        {
+          "predefined": "stars"
+        },
+        {
+          "name": "planet",
+          "offsetRatio": 0.2,
+          "posX": 0.4,
+          "posY": 0.4
+        },
+        {
+          "name": "sat1",
+          "offsetRatio": 0.3,
+          "posX": 0.3,
+          "posY": 0.4
+        },
+        {
+          "name": "sat2",
+          "offsetRatio": 0.3,
+          "posX": 0.65,
+          "posY": 0.6
+        },
+        {
+          "name": "sat3",
+          "offsetRatio": 0.3,
+          "posX": 0.28,
+          "posY": 0.68
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "name": "R-7",
+      "alias": "r7",
+      "layers": [
+        {
+          "name": "abstract",
+          "offsetRatio": -0.6
+        },
+        {
+          "predefined": "stars",
+          "offsetRatio": -0.5
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": -0.3,
+          "stretch": false
+        },
+        {
+          "predefined": "dust3",
+          "offsetRatio": 0.5
+        },
+        {
+          "predefined": "dust5",
+          "offsetRatio": 2.0
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "name": "E-7",
+      "alias": "e7",
+      "layers": [
+        {
+          "name": "bg",
+          "ext": "jpg",
+          "offsetRatio": -0.7
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": -0.3,
+          "stretch": false
+        },
+        {
+          "predefined": "stars"
+        },
+        {
+          "name": "flare",
+          "offsetRatio": -0.5,
+          "posX": 0.8,
+          "posY": 0.8
+        },
+        {
+          "name": "planet",
+          "offsetRatio": 0.1,
+          "posX": 0.35,
+          "posY": 0.35
+        },
+        {
+          "name": "object",
+          "offsetRatio": 0.35,
+          "posX": 0.42,
+          "posY": 0.62
+        },
+        {
+          "name": "asteroids",
+          "offsetRatio": 0.6,
+          "posX": 0.42,
+          "posY": 0.32
+        },
+        {
+          "predefined": "dust3"
+        },
+        {
+          "predefined": "dust6",
+          "offsetRatio": 2.2
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "name": "G-1",
+      "alias": "g1",
+      "layers": [
+        {
+          "predefined": "dust1",
+          "offsetRatio": -0.3,
+          "stretch": false
+        },
+        {
+          "name": "blackhole",
+          "offsetRatio": -0.2,
+          "posX": 0.28,
+          "posY": 0.75
+        },
+        {
+          "name": "star_blue",
+          "offsetRatio": 0.1,
+          "posX": 0.8,
+          "posY": 0.7
+        },
+        {
+          "name": "planet1",
+          "offsetRatio": 0.4,
+          "posY": 0.42
+        },
+        {
+          "name": "ambient1",
+          "offsetRatio": 0.8
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 1.2
+        },
+        {
+          "predefined": "dust_blue3",
+          "offsetRatio": 2.85
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "name": "X-2",
+      "alias": "u1",
+      "hasPreview": false
+    },
+    {
+      "id": 61,
+      "name": "S-18",
+      "alias": "s18",
+      "maxWidth": 2350,
+      "hasMainBackground": false,
+      "layers": [
+        {
+          "name": "bg",
+          "ext": "jpg",
+          "offsetRatio": -0.95,
+          "scale": 0.9
+        },
+        {
+          "predefined": "stars",
+          "offsetRatio": -0.88,
+          "scale": 2
+        },
+        {
+          "name": "planet",
+          "scale": 0.625,
+          "posX": -0.5,
+          "posY": 0,
+          "offsetRatio": -0.75
+        },
+        {
+          "name": "planetDebris",
+          "scale": 0.625,
+          "posX": -0.15,
+          "posY": 0.15,
+          "offsetRatio": -0.7
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": -0.6,
+          "scale": 3
+        },
+        {
+          "name": "cloud1",
+          "scale": 0.8,
+          "posX": 0,
+          "posY": 0.68,
+          "offsetRatio": -0.6
+        },
+        {
+          "predefined": "dust_blue1",
+          "offsetRatio": -0.5,
+          "scale": 3
+        },
+        {
+          "name": "stuff",
+          "scale": 0.8,
+          "posX": 0.9,
+          "posY": 0.65,
+          "offsetRatio": -0.45
+        },
+        {
+          "name": "cloud2",
+          "scale": 0.8,
+          "posX": 0.75,
+          "posY": 0.3,
+          "offsetRatio": -0.35
+        },
+        {
+          "predefined": "dust3",
+          "offsetRatio": -0.22,
+          "scale": 3
+        },
+        {
+          "name": "flare",
+          "scale": 0.7,
+          "posX": -0.05,
+          "posY": 1.05,
+          "offsetRatio": -1.7
+        }
+      ]
+    },
+    {
+      "id": 71,
+      "name": "PvP",
+      "alias": "pvp",
+      "scale": 2,
+      "hasMainBackground": false,
+      "layers": [
+        {
+          "name": "bg",
+          "ext": "jpg",
+          "scale": 0.75,
+          "offsetRatio": -0.65,
+          "posX": 0.5,
+          "posY": 0.5
+        },
+        {
+          "name": "bs1",
+          "offsetRatio": -0.615,
+          "posX": 0.285,
+          "posY": 0.49,
+          "scale": 0.565
+        },
+        {
+          "predefined": "asteroids2",
+          "scale": 2,
+          "offsetRatio": -0.4
+        },
+        {
+          "predefined": "asteroids3",
+          "stretch": false
+        },
+        {
+          "predefined": "dust3",
+          "scale": 2,
+          "offsetRatio": -0.2
+        },
+        {
+          "predefined": "dust3",
+          "scale": 4
+        },
+        {
+          "name": "flare",
+          "offsetRatio": -1.5,
+          "posX": 0.1,
+          "posY": 0.68,
+          "scale": 1.5,
+          "onTop": true
+        },
+        {
+          "name": "glare",
+          "offsetRatio": -0.35,
+          "posX": 0.0,
+          "posY": 0.7,
+          "scale": 2.5,
+          "onTop": true
+        },
+        {
+          "name": "dist_ovl",
+          "offsetRatio": -0.6475,
+          "posX": 0.5,
+          "posY": 0.5,
+          "scale": 0.75
+        }
+      ]
+    },
+    {
+      "id": 110,
+      "name": "M-1",
+      "alias": "m1",
+      "mainBackgroundScale": 1.2,
+      "layers": [
+        {
+          "predefined": "stars",
+          "offsetRatio": -0.6,
+          "stretch": true
+        },
+        {
+          "name": "cloud",
+          "offsetRatio": -0.25,
+          "posX": 0.8,
+          "posY": 0.6
+        },
+        {
+          "name": "planet",
+          "offsetRatio": 0.2,
+          "posX": 0.8,
+          "posY": 0.2
+        },
+        {
+          "name": "obj2",
+          "offsetRatio": 1,
+          "posX": 0.7,
+          "posY": 0.4
+        },
+        {
+          "predefined": "dust5",
+          "offsetRatio": 2.0
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 4.5
+        },
+        {
+          "name": "obj1",
+          "offsetRatio": 6,
+          "posX": 0.5,
+          "posY": 0.5,
+          "inPreview": false
+        }
+      ]
+    },
+    {
+      "id": 120,
+      "name": "M-2",
+      "alias": "m2",
+      "layers": [
+        {
+          "predefined": "stars",
+          "offsetRatio": -0.5
+        },
+        {
+          "name": "collision",
+          "offsetRatio": 0
+        },
+        {
+          "name": "asteroid2",
+          "offsetRatio": 0
+        },
+        {
+          "name": "asteroid1",
+          "offsetRatio": 0
+        },
+        {
+          "name": "asteroid3",
+          "offsetRatio": 1.0
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 1.2
+        },
+        {
+          "predefined": "dust3",
+          "offsetRatio": 5.2
+        }
+      ]
+    },
+    {
+      "id": 130,
+      "name": "M-3",
+      "alias": "m3",
+      "scale": 2,
+      "layers": [
+        {
+          "predefined": "stars",
+          "offsetRatio": -0.4
+        },
+        {
+          "name": "hit_planet",
+          "offsetRatio": -0.2,
+          "stretch": false
+        },
+        {
+          "name": "clouds1",
+          "offsetRatio": -0.1,
+          "stretch": true
+        },
+        {
+          "name": "clouds2",
+          "offsetRatio": 0.2,
+          "stretch": true
+        },
+        {
+          "predefined": "asteroids3",
+          "stretch": false
+        },
+        {
+          "predefined": "dust3"
+        },
+        {
+          "predefined": "dust6",
+          "offsetRatio": 3.8,
+          "stretch": false
+        }
+      ]
+    },
+    {
+      "id": 140,
+      "name": "M-4",
+      "alias": "m4",
+      "layers": [
+        {
+          "predefined": "asteroids3",
+          "offsetRatio": -0.7
+        },
+        {
+          "name": "acid_clouds",
+          "offsetRatio": -0.4
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": -0.3
+        },
+        {
+          "name": "Star",
+          "offsetRatio": -0.25,
+          "rotation": true,
+          "rotationSpeed": 2
+        },
+        {
+          "name": "Star",
+          "offsetRatio": -0.25,
+          "rotation": true,
+          "rotationSpeed": -2
+        },
+        {
+          "name": "Star",
+          "offsetRatio": -0.25
+        },
+        {
+          "predefined": "asteroids2",
+          "offsetRatio": -0.15
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": -0.12
+        },
+        {
+          "name": "Planet2",
+          "offsetRatio": -0.1,
+          "posX": 0.4,
+          "posY": 0.6
+        },
+        {
+          "name": "Planet",
+          "offsetRatio": 0.3,
+          "posX": 0.8,
+          "posY": 0.2
+        },
+        {
+          "name": "Station",
+          "offsetRatio": 0.3,
+          "posX": 0.15,
+          "posY": 0.25
+        },
+        {
+          "predefined": "dust1",
+          "offsetRatio": 1.0
+        },
+        {
+          "predefined": "asteroids1",
+          "offsetRatio": 1.5
+        }
+      ]
+    },
+    {
+      "id": 1110,
+      "name": "M-11",
+      "alias": "m11",
+      "layers": [
+        {
+          "name": "Smash",
+          "offsetRatio": -0.58,
+          "posX": 0.49,
+          "posY": 0.58,
+          "scale": 1
+        },
+        {
+          "predefined": "dust_red1",
+          "offsetRatio": -0.49
+        },
+        {
+          "name": "Star",
+          "offsetRatio": -0.45,
+          "posX": 0.9,
+          "posY": 0.23,
+          "scale": 2
+        },
+        {
+          "name": "Back2",
+          "offsetRatio": -0.37,
+          "posX": 0.96,
+          "posY": 0.25,
+          "scale": 1.6
+        },
+        {
+          "predefined": "dust7",
+          "offsetRatio": -0.2
+        },
+        {
+          "predefined": "asteroids3",
+          "offsetRatio": 0.1
+        },
+        {
+          "name": "Asteroid",
+          "offsetRatio": 0.1,
+          "posX": 0.5,
+          "posY": 0.6,
+          "scale": 1
+        },
+        {
+          "predefined": "dust3",
+          "offsetRatio": 0.5
+        },
+        {
+          "predefined": "asteroids2",
+          "offsetRatio": 1.1
+        }
+      ]
+    }
+  ]
+}
+
+
+
+
+
+
+
+
+
+

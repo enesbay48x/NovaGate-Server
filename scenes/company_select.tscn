@@ -1,0 +1,202 @@
+[gd_scene format=3 uid="uid://570xvfaet7la"]
+
+[ext_resource type="Script" uid="uid://ccu4qgpcgqogb" path="res://scripts/company_select.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://b7jpoila6o0b8" path="res://assets/ui_imported/company/bg.jpg" id="2_bg"]
+[ext_resource type="Texture2D" uid="uid://cnwy0tnyfyjfd" path="res://assets/ui_imported/company/bg_solar.png" id="3_solar_bg"]
+[ext_resource type="Texture2D" uid="uid://bkt7rs3d66v3v" path="res://assets/ui_imported/company/bg_orion.png" id="4_orion_bg"]
+[ext_resource type="Texture2D" uid="uid://dxxreuu8h5msu" path="res://assets/ui_imported/company/bg_vega.png" id="5_vega_bg"]
+[ext_resource type="Texture2D" uid="uid://b222ip3ra8gxs" path="res://assets/ui_imported/company/char_solar.png" id="6_solar_char"]
+[ext_resource type="Texture2D" uid="uid://g2xt1323v3ac" path="res://assets/ui_imported/company/char_orion.png" id="7_orion_char"]
+[ext_resource type="Texture2D" uid="uid://cq8q03p8nvxda" path="res://assets/ui_imported/company/char_vega.png" id="8_vega_char"]
+[ext_resource type="Texture2D" uid="uid://5q3whufho577" path="res://scenes/544812b6-bdf6-4113-a3b0-cf4e97b2002a.png" id="12_ce8gl"]
+
+[sub_resource type="StyleBoxFlat" id="SelectBtn"]
+bg_color = Color(0.02, 0.08, 0.13, 0.84)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.08, 0.8, 1, 0.9)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="CompanySelect" type="Control" unique_id=1640734847]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="BG" type="TextureRect" parent="." unique_id=1803389641]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_bg")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Shade" type="ColorRect" parent="." unique_id=864314540]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.24)
+
+[node name="Header" type="Label" parent="." unique_id=536728797]
+layout_mode = 0
+offset_left = 300.0
+offset_top = 38.0
+offset_right = 980.0
+offset_bottom = 92.0
+theme_override_colors/font_color = Color(0.6, 0.92, 1, 1)
+theme_override_font_sizes/font_size = 35
+text = "ŞİRKETİNİ SEÇ"
+horizontal_alignment = 1
+
+[node name="Info" type="Label" parent="." unique_id=135443964]
+layout_mode = 0
+offset_left = 340.0
+offset_top = 92.0
+offset_right = 940.0
+offset_bottom = 124.0
+theme_override_colors/font_color = Color(0.8, 0.83, 0.9, 1)
+text = "Seçimin hesabına kalıcı olarak kaydedilir"
+horizontal_alignment = 1
+
+[node name="MMOCard" type="TextureRect" parent="." unique_id=110554203]
+layout_mode = 0
+offset_left = 105.0
+offset_top = 150.0
+offset_right = 405.0
+offset_bottom = 550.0
+mouse_filter = 2
+texture = ExtResource("3_solar_bg")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Logo" type="TextureRect" parent="MMOCard" unique_id=1143609311]
+layout_mode = 0
+offset_right = 300.0
+offset_bottom = 162.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Char" type="TextureRect" parent="MMOCard" unique_id=2047009365]
+layout_mode = 0
+offset_left = 112.0
+offset_top = 150.0
+offset_right = 187.0
+offset_bottom = 375.0
+mouse_filter = 2
+texture = ExtResource("6_solar_char")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="EICCard" type="TextureRect" parent="." unique_id=1154560658]
+layout_mode = 0
+offset_left = 490.0
+offset_top = 150.0
+offset_right = 790.0
+offset_bottom = 550.0
+mouse_filter = 2
+texture = ExtResource("4_orion_bg")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Logo" type="TextureRect" parent="EICCard" unique_id=1374489136]
+layout_mode = 0
+offset_right = 300.0
+offset_bottom = 162.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Char" type="TextureRect" parent="EICCard" unique_id=320888455]
+layout_mode = 0
+offset_left = 112.0
+offset_top = 150.0
+offset_right = 187.0
+offset_bottom = 375.0
+mouse_filter = 2
+texture = ExtResource("7_orion_char")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="VRUCard" type="TextureRect" parent="." unique_id=1679172915]
+layout_mode = 0
+offset_left = 875.0
+offset_top = 150.0
+offset_right = 1175.0
+offset_bottom = 550.0
+mouse_filter = 2
+texture = ExtResource("5_vega_bg")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Logo" type="TextureRect" parent="VRUCard" unique_id=1736298409]
+layout_mode = 0
+offset_right = 300.0
+offset_bottom = 162.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Char" type="TextureRect" parent="VRUCard" unique_id=633747832]
+layout_mode = 0
+offset_left = 112.0
+offset_top = 150.0
+offset_right = 187.0
+offset_bottom = 375.0
+mouse_filter = 2
+texture = ExtResource("8_vega_char")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MMO" type="Button" parent="." unique_id=608111864]
+layout_mode = 0
+offset_left = 130.0
+offset_top = 570.0
+offset_right = 380.0
+offset_bottom = 630.0
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("SelectBtn")
+theme_override_styles/hover = SubResource("SelectBtn")
+text = "MMO  •  SEÇ"
+
+[node name="EIC" type="Button" parent="." unique_id=53554805]
+layout_mode = 0
+offset_left = 515.0
+offset_top = 570.0
+offset_right = 765.0
+offset_bottom = 630.0
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("SelectBtn")
+theme_override_styles/hover = SubResource("SelectBtn")
+text = "EIC  •  SEÇ"
+
+[node name="VRU" type="Button" parent="." unique_id=1817578783]
+layout_mode = 0
+offset_left = 900.0
+offset_top = 570.0
+offset_right = 1150.0
+offset_bottom = 630.0
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("SelectBtn")
+theme_override_styles/hover = SubResource("SelectBtn")
+text = "VRU  •  SEÇ"
+
+[node name="544812b6Bdf64113A3b0Cf4e97b2002a" type="Sprite2D" parent="." unique_id=163563455]
+position = Vector2(935, 1790)
+texture = ExtResource("12_ce8gl")

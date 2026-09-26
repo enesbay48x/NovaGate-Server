@@ -1,0 +1,27 @@
+[gd_scene format=3 uid="uid://c3slep4kcn8b1"]
+
+[node name="CategoryButtons" type="HBoxContainer" unique_id=1194021815]
+
+[node name="GemiButton" type="Button" parent="." unique_id=792635423]
+layout_mode = 2
+text = "GEMİ"
+
+[node name="CephaneButton" type="Button" parent="." unique_id=311340728]
+layout_mode = 2
+text = "CEPHANE"
+
+[node name="LazerButton" type="Button" parent="." unique_id=1027543081]
+layout_mode = 2
+text = "LAZER"
+
+[node name="JeneratorButton" type="Button" parent="." unique_id=906598842]
+layout_mode = 2
+text = "JENERATÖR"
+
+[node name="EkstralarButton" type="Button" parent="." unique_id=1263701646]
+layout_mode = 2
+text = "EKSTRALAR"
+
+[node name="DroidButton" type="Button" parent="." unique_id=209988402]
+layout_mode = 2
+text = "DROİD"

@@ -1,0 +1,8 @@
+Login Connected V3
+
+Bu paket:
+- LoginButton pressed bağlantısı
+- RegisterButton pressed bağlantısı
+- AccountManager login çağrısı
+
+için güncelleme içerir.

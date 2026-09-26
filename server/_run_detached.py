@@ -29,12 +29,22 @@ def main() -> int:
         print(__doc__)
         return 2
     out_path = os.path.join(HERE, sys.argv[1])
-    args = sys.argv[2:]
     result_path = out_path + ".result.json"
+    target = sys.argv[2]
+    extra = sys.argv[3:]
 
-    command = [sys.executable, "-m", "pytest"] + args
+    # A file ending in .py that is NOT a test module is run as a plain script
+    # (e.g. the E2E drivers). Everything else goes through pytest, because
+    # pytest needs to own collection and fixtures for tests.
+    is_script = target.endswith(".py") and not os.path.basename(
+        target).startswith("test_")
+    if is_script:
+        command = [sys.executable, os.path.join(HERE, target)] + extra
+    else:
+        command = [sys.executable, "-m", "pytest", target] + extra
+
     started = time.time()
-    # The output file is opened INSIDE the child and handed to pytest as its
+    # The output file is opened INSIDE the child and handed to the child as its
     # own stdout. Relying on the parent's handle being inherited (with
     # DETACHED_PROCESS + close_fds) left the file empty, which made a real
     # result indistinguishable from no run at all.
@@ -45,7 +55,7 @@ def main() -> int:
         "c=subprocess.call(%r,stdout=f,stderr=subprocess.STDOUT)\n"
         "f.flush();f.close()\n"
         "json.dump({'code':c,'seconds':round(time.time()-t,1),'args':%r},"
-        "open(%r,'w'))\n" % (out_path, command, args, result_path)
+        "open(%r,'w'))\n" % (out_path, command, [target] + extra, result_path)
     )
     devnull = open(os.devnull, "w")
     subprocess.Popen(

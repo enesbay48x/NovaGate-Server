@@ -1,0 +1,1 @@
+Company selection now stores company and start_map. main.gd loads stored start_map.

@@ -1,0 +1,143 @@
+extends Node2D
+class_name GalaxyGateArena
+
+const NPC_SCENE: PackedScene = preload("res://scenes/npc.tscn")
+const ENTRY_POSITIONS: Dictionary = {
+	"ALPHA": Vector2(-2800.0, 1100.0),
+	"BETA": Vector2(2800.0, 1100.0),
+	"GAMMA": Vector2(0.0, -2400.0)
+}
+
+var gate_name: String = ""
+var player: PlayerShip = null
+var npc_root: Node2D = null
+var arena_root: Node2D = null
+var rng := RandomNumberGenerator.new()
+
+func _ready() -> void:
+	rng.randomize()
+	gate_name = GlobalState.active_gate.strip_edges().to_upper()
+	if gate_name.is_empty():
+		gate_name = "ALPHA"
+	GlobalState.active_gate = gate_name
+	GlobalState.gate_arena_name = gate_name
+	GlobalState.in_galaxy_gate = true
+	GlobalState.gate_current_wave = 1
+	GlobalState.gate_remaining_lives = GlobalState.GALAXY_GATE_LIVES
+	print("GALAXY_GATE_ARENA_LOADED gate=", gate_name)
+	print("GALAXY_GATE_PLAYER_SPAWN gate=", gate_name)
+	print("GALAXY_GATE_ARENA_ACTIVE gate=", gate_name, " in_galaxy_gate=", GlobalState.in_galaxy_gate)
+	print("GALAXY_GATE_CURRENT_SCENE=", get_tree().current_scene.name if get_tree().current_scene != null else "null")
+	_build_arena()
+	_setup_player()
+	_spawn_gate_wave()
+
+func _build_arena() -> void:
+	arena_root = get_node_or_null("ArenaRoot")
+	if arena_root == null:
+		arena_root = Node2D.new()
+		arena_root.name = "ArenaRoot"
+		add_child(arena_root)
+
+	var background := Polygon2D.new()
+	background.name = "Background"
+	background.position = Vector2.ZERO
+	background.polygon = PackedVector2Array([
+		Vector2(-10000.0, -7000.0),
+		Vector2(10000.0, -7000.0),
+		Vector2(10000.0, 7000.0),
+		Vector2(-10000.0, 7000.0)
+	])
+	background.color = Color(0.08, 0.10, 0.18, 1.0)
+	background.z_index = -1000
+	arena_root.add_child(background)
+
+	var ring := Line2D.new()
+	ring.name = "ArenaRing"
+	ring.width = 8.0
+	ring.default_color = Color(0.25, 0.82, 1.0, 0.9)
+	var ring_points: PackedVector2Array = []
+	for i in range(0, 361, 12):
+		var angle: float = deg_to_rad(float(i))
+		var x: float = cos(angle) * 4200.0
+		var y: float = sin(angle) * 3300.0
+		ring_points.append(Vector2(x, y))
+	ring.points = ring_points
+	ring.closed = true
+	ring.z_index = -50
+	arena_root.add_child(ring)
+
+	npc_root = get_node_or_null("ArenaRoot/NPCs")
+	if npc_root == null:
+		npc_root = Node2D.new()
+		npc_root.name = "NPCs"
+		arena_root.add_child(npc_root)
+
+func _setup_player() -> void:
+	var existing_player := get_node_or_null("PlayerShip")
+	if existing_player != null and existing_player is PlayerShip:
+		player = existing_player as PlayerShip
+	else:
+		player = PlayerShip.new()
+		player.name = "PlayerShip"
+		add_child(player)
+	player.visible = true
+	player.global_position = _entry_position_for_gate(gate_name)
+	player.set_meta("in_galaxy_gate", true)
+	var player_camera := player.get_node_or_null("Camera2D") as Camera2D
+	if player_camera == null:
+		player_camera = Camera2D.new()
+		player_camera.name = "Camera2D"
+		player_camera.zoom = Vector2(0.6, 0.6)
+		player_camera.position_smoothing_enabled = true
+		player.add_child(player_camera)
+	player_camera.make_current()
+	print("GALAXY_GATE_PLAYER_SPAWN gate=", gate_name, " position=", player.global_position)
+
+func _entry_position_for_gate(gate: String) -> Vector2:
+	var key := gate.strip_edges().to_upper()
+	if ENTRY_POSITIONS.has(key):
+		return ENTRY_POSITIONS[key]
+	return Vector2.ZERO
+
+func _random_spawn_position() -> Vector2:
+	var angle := rng.randf_range(0.0, TAU)
+	var distance := rng.randf_range(900.0, 2600.0)
+	return Vector2(cos(angle) * distance, sin(angle) * distance)
+
+func _spawn_gate_wave() -> void:
+	for spawned in npc_root.get_children():
+		spawned.queue_free()
+	var wave_num := clampi(GlobalState.gate_current_wave, 1, 40)
+	var table: Array = GlobalState.get_gate_wave_table(gate_name)
+	var selected: Dictionary = {}
+	for candidate in table:
+		if int(candidate.get("wave", 0)) == wave_num:
+			selected = candidate
+			break
+	if selected.is_empty():
+		selected = {"wave": wave_num, "spawns": [{"npc_type": "zyron_raider", "npc_count": 3, "gate_multiplier": 1.0}]}
+	print("GALAXY_GATE_WAVE_START gate=", gate_name, " wave=", wave_num)
+	for spawn in selected.get("spawns", []):
+		var npc_type := str(spawn.get("npc_type", "zyron_raider"))
+		var count := maxi(1, int(spawn.get("npc_count", 1)))
+		for i in range(count):
+			var npc := NPC_SCENE.instantiate()
+			npc.name = "%s_%s_%s" % [gate_name, npc_type, i]
+			npc.global_position = _random_spawn_position()
+			npc.npc_name = npc_type
+			npc.set_meta("gate_name", gate_name)
+			npc.set_meta("gate_wave", wave_num)
+			npc_root.add_child(npc)
+	print("GALAXY_GATE_ARENA_ACTIVE gate=", gate_name, " in_galaxy_gate=", GlobalState.in_galaxy_gate)
+
+func _process(_delta: float) -> void:
+	if Input.is_key_pressed(KEY_ESCAPE) or Input.is_key_pressed(KEY_L):
+		_leave_gate()
+
+func _leave_gate() -> void:
+	print("GALAXY_GATE_SCENE_CHANGE_END gate=", gate_name)
+	GlobalState.leave_gate()
+	if str(GlobalState.start_map).strip_edges().is_empty():
+		GlobalState.start_map = "1-1"
+	get_tree().call_deferred("change_scene_to_file", "res://scenes/main.tscn")

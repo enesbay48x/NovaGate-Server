@@ -1,0 +1,510 @@
+
+alien10.png
+size: 2038, 1812
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+ship frm
+  rotate: false
+  xy: 2, 4
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 0
+ship frm
+  rotate: false
+  xy: 228, 4
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 1
+ship frm
+  rotate: false
+  xy: 454, 4
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 2
+ship frm
+  rotate: false
+  xy: 680, 4
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 3
+ship frm
+  rotate: false
+  xy: 906, 4
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 4
+ship frm
+  rotate: false
+  xy: 1132, 4
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 5
+ship frm
+  rotate: false
+  xy: 1358, 4
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 6
+ship frm
+  rotate: false
+  xy: 1584, 4
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 7
+ship frm
+  rotate: false
+  xy: 1810, 4
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 8
+ship frm
+  rotate: false
+  xy: 2, 230
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 9
+ship frm
+  rotate: false
+  xy: 228, 230
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 10
+ship frm
+  rotate: false
+  xy: 454, 230
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 11
+ship frm
+  rotate: false
+  xy: 680, 230
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 12
+ship frm
+  rotate: false
+  xy: 906, 230
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 13
+ship frm
+  rotate: false
+  xy: 1132, 230
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 14
+ship frm
+  rotate: false
+  xy: 1358, 230
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 15
+ship frm
+  rotate: false
+  xy: 1584, 230
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 16
+ship frm
+  rotate: false
+  xy: 1810, 230
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 17
+ship frm
+  rotate: false
+  xy: 2, 456
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 18
+ship frm
+  rotate: false
+  xy: 228, 456
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 19
+ship frm
+  rotate: false
+  xy: 454, 456
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 20
+ship frm
+  rotate: false
+  xy: 680, 456
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 21
+ship frm
+  rotate: false
+  xy: 906, 456
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 22
+ship frm
+  rotate: false
+  xy: 1132, 456
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 23
+ship frm
+  rotate: false
+  xy: 1358, 456
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 24
+ship frm
+  rotate: false
+  xy: 1584, 456
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 25
+ship frm
+  rotate: false
+  xy: 1810, 456
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 26
+ship frm
+  rotate: false
+  xy: 2, 682
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 27
+ship frm
+  rotate: false
+  xy: 228, 682
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 28
+ship frm
+  rotate: false
+  xy: 454, 682
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 29
+ship frm
+  rotate: false
+  xy: 680, 682
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 30
+ship frm
+  rotate: false
+  xy: 906, 682
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 31
+ship frm
+  rotate: false
+  xy: 1132, 682
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 32
+ship frm
+  rotate: false
+  xy: 1358, 682
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 33
+ship frm
+  rotate: false
+  xy: 1584, 682
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 34
+ship frm
+  rotate: false
+  xy: 1810, 682
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 35
+ship frm
+  rotate: false
+  xy: 2, 908
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 36
+ship frm
+  rotate: false
+  xy: 228, 908
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 37
+ship frm
+  rotate: false
+  xy: 454, 908
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 38
+ship frm
+  rotate: false
+  xy: 680, 908
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 39
+ship frm
+  rotate: false
+  xy: 906, 908
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 40
+ship frm
+  rotate: false
+  xy: 1132, 908
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 41
+ship frm
+  rotate: false
+  xy: 1358, 908
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 42
+ship frm
+  rotate: false
+  xy: 1584, 908
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 43
+ship frm
+  rotate: false
+  xy: 1810, 908
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 44
+ship frm
+  rotate: false
+  xy: 2, 1134
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 45
+ship frm
+  rotate: false
+  xy: 228, 1134
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 46
+ship frm
+  rotate: false
+  xy: 454, 1134
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 47
+ship frm
+  rotate: false
+  xy: 680, 1134
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 48
+ship frm
+  rotate: false
+  xy: 906, 1134
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 49
+ship frm
+  rotate: false
+  xy: 1132, 1134
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 50
+ship frm
+  rotate: false
+  xy: 1358, 1134
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 51
+ship frm
+  rotate: false
+  xy: 1584, 1134
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 52
+ship frm
+  rotate: false
+  xy: 1810, 1134
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 53
+ship frm
+  rotate: false
+  xy: 2, 1360
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 54
+ship frm
+  rotate: false
+  xy: 228, 1360
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 55
+ship frm
+  rotate: false
+  xy: 454, 1360
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 56
+ship frm
+  rotate: false
+  xy: 680, 1360
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 57
+ship frm
+  rotate: false
+  xy: 906, 1360
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 58
+ship frm
+  rotate: false
+  xy: 1132, 1360
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 59
+ship frm
+  rotate: false
+  xy: 1358, 1360
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 60
+ship frm
+  rotate: false
+  xy: 1584, 1360
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 61
+ship frm
+  rotate: false
+  xy: 1810, 1360
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 62
+ship frm
+  rotate: false
+  xy: 2, 1586
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 63
+ship frm
+  rotate: false
+  xy: 228, 1586
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 64
+ship frm
+  rotate: false
+  xy: 454, 1586
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 65
+ship frm
+  rotate: false
+  xy: 680, 1586
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 66
+ship frm
+  rotate: false
+  xy: 906, 1586
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 67
+ship frm
+  rotate: false
+  xy: 1132, 1586
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 68
+ship frm
+  rotate: false
+  xy: 1358, 1586
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 69
+ship frm
+  rotate: false
+  xy: 1584, 1586
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 70
+ship frm
+  rotate: false
+  xy: 1810, 1586
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: 71

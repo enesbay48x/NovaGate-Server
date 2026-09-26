@@ -1,0 +1,230 @@
+
+alien40.png
+size: 4096,1024
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+frm_000_angle_0.0
+  rotate: false
+  xy: 0, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_001_angle_-11.25
+  rotate: false
+  xy: 256, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_002_angle_-22.5
+  rotate: false
+  xy: 512, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_003_angle_-33.75
+  rotate: false
+  xy: 768, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_004_angle_-45.0
+  rotate: false
+  xy: 1024, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_005_angle_-56.25
+  rotate: false
+  xy: 1280, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_006_angle_-67.5
+  rotate: false
+  xy: 1536, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_007_angle_-78.75
+  rotate: false
+  xy: 1792, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_008_angle_-90.0
+  rotate: false
+  xy: 2048, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_009_angle_-101.25
+  rotate: false
+  xy: 2304, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_010_angle_-112.5
+  rotate: false
+  xy: 2560, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_011_angle_-123.75
+  rotate: false
+  xy: 2816, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_012_angle_-135.0
+  rotate: false
+  xy: 3072, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_013_angle_-146.25
+  rotate: false
+  xy: 3328, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_014_angle_-157.5
+  rotate: false
+  xy: 3584, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_015_angle_-168.75
+  rotate: false
+  xy: 3840, 0
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_016_angle_-180.0
+  rotate: false
+  xy: 0, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_017_angle_-191.25
+  rotate: false
+  xy: 256, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_018_angle_-202.5
+  rotate: false
+  xy: 512, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_019_angle_-213.75
+  rotate: false
+  xy: 768, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_020_angle_-225.0
+  rotate: false
+  xy: 1024, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_021_angle_-236.25
+  rotate: false
+  xy: 1280, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_022_angle_-247.5
+  rotate: false
+  xy: 1536, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_023_angle_-258.75
+  rotate: false
+  xy: 1792, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_024_angle_-270.0
+  rotate: false
+  xy: 2048, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_025_angle_-281.25
+  rotate: false
+  xy: 2304, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_026_angle_-292.5
+  rotate: false
+  xy: 2560, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_027_angle_-303.75
+  rotate: false
+  xy: 2816, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_028_angle_-315.0
+  rotate: false
+  xy: 3072, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_029_angle_-326.25
+  rotate: false
+  xy: 3328, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_030_angle_-337.5
+  rotate: false
+  xy: 3584, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1
+frm_031_angle_-348.75
+  rotate: false
+  xy: 3840, 256
+  size: 256, 256
+  orig: 256, 256
+  offset: 0, 0
+  index: -1

@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource path="res://scripts/laser_toggle_button.gd" type="Script" id="1"]
+
+[node name="LaserToggleButton" type="TextureButton"]
+custom_minimum_size = Vector2(120, 50)
+mouse_filter = 0
+script = ExtResource("1")

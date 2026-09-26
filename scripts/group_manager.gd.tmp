@@ -1,0 +1,166 @@
+## GroupManager — autoload singleton.
+## Local/mock group/team system with a server-ready API surface.
+##
+## Public API:
+##   create_group()                 -> bool
+##   leave_group()                  -> bool
+##   invite_player(username)        -> bool
+##   accept_invite(from_player)     -> bool
+##   reject_invite(from_player)     -> bool
+##   is_in_group(username)          -> bool
+##   get_my_group()                 -> Group
+##   get_members()                  -> Array[GroupMember]
+##   is_group_full()                -> bool
+##   get_invites()                  -> Array[Dictionary]
+
+extends Node
+
+const MODEL_PATH := "res://scripts/social_model.gd"
+const GROUP_TAG := "TAKIM"
+
+signal group_changed
+signal invite_received(from_player: String)
+signal invite_accepted(from_player: String)
+signal invite_rejected(from_player: String)
+signal group_disbanded
+
+var _model: GDScript = load(MODEL_PATH)
+var _group: Group = null
+var _invites: Array[Dictionary] = []
+var _current_player: String = ""
+
+func _ready() -> void:
+	_current_player = _resolve_current_player()
+
+func _resolve_current_player() -> String:
+	var username: String = GlobalState.username
+	if username.is_empty():
+		var am = load("res://scripts/account_manager.gd").new()
+		username = am.get_current_player()
+		am.queue_free()
+	return username
+
+# --- Public API -------------------------------------------------------------
+
+func create_group() -> bool:
+	if _group != null and not _group.is_empty():
+		return false
+	_group = _model.Group.new()
+	_group.tag = GROUP_TAG
+	_group.created_at = Time.get_unix_time_from_system()
+	var leader := _model.GroupMember.new()
+	leader.username = _current_player
+	leader.is_leader = true
+	leader.online = true
+	_group.add_member(leader)
+	group_changed.emit()
+	return true
+
+func leave_group() -> bool:
+	if _group == null or _group.is_empty():
+		return false
+	_group = null
+	group_changed.emit()
+	group_disbanded.emit()
+	return true
+
+func invite_player(to_player: String) -> bool:
+	if _group == null or _group.is_empty():
+		return false
+	if _group.is_full():
+		return false
+	if _group.has_member(to_player):
+		return false
+	if to_player == _current_player:
+		return false
+	var inv := {"from": _current_player, "to": to_player, "timestamp": Time.get_unix_time_from_system()}
+	_invites.append(inv)
+	invite_received.emit(_current_player)
+	return true
+
+func accept_invite(from_player: String) -> bool:
+	var idx := _find_invite_index(from_player)
+	if idx < 0:
+		return false
+	var inv = _invites[idx]
+	if inv["to"] != _current_player:
+		return false
+	_invites.remove_at(idx)
+	if _group == null:
+		_group = _model.Group.new()
+		_group.tag = GROUP_TAG
+		_group.created_at = inv["timestamp"]
+	var member := _model.GroupMember.new()
+	member.username = _current_player
+	member.is_leader = false
+	member.online = true
+	if not _group.add_member(member):
+		return false
+	group_changed.emit()
+	invite_accepted.emit(from_player)
+	return true
+
+func reject_invite(from_player: String) -> bool:
+	var idx := _find_invite_index(from_player)
+	if idx < 0:
+		return false
+	_invites.remove_at(idx)
+	invite_rejected.emit(from_player)
+	return true
+
+func is_in_group(username: String) -> bool:
+	if _group == null:
+		return false
+	return _group.has_member(username)
+
+func get_my_group() -> Group:
+	return _group if (_group != null and not _group.is_empty()) else null
+
+func get_members() -> Array:
+	if _group == null:
+		return []
+	return _group.members
+
+func is_group_full() -> bool:
+	if _group == null:
+		return false
+	return _group.is_full()
+
+func is_leader() -> bool:
+	if _group == null:
+		return false
+	for m in _group.members:
+		if m.username == _current_player:
+			return m.is_leader
+	return false
+
+func get_invites() -> Array[Dictionary]:
+	var mine: Array[Dictionary] = []
+	for inv in _invites:
+		if inv["to"] == _current_player:
+			mine.append(inv)
+	return mine
+
+func group_member_count() -> int:
+	if _group == null:
+		return 0
+	return _group.members.size()
+
+# --- Local/mock roster helpers ---------------------------------------------
+
+func _find_invite_index(from_player: String) -> int:
+	for i in range(_invites.size()):
+		if _invites[i]["from"] == from_player and _invites[i]["to"] == _current_player:
+			return i
+	return -1
+
+# Local mock: simulate another player joining a group.
+func mock_add_member(username: String) -> void:
+	if _group == null:
+		return
+	var member := _model.GroupMember.new()
+	member.username = username
+	member.is_leader = false
+	member.online = true
+	_group.add_member(member)
+	group_changed.emit()

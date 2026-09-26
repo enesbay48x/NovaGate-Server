@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c0nvag2p7esce"]
+
+[ext_resource type="Script" path="res://scripts/p2_p7_e2e_driver.gd" id="1_driver"]
+
+[node name="P2P7E2E" type="Node"]
+script = ExtResource("1_driver")

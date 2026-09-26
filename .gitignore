@@ -18,6 +18,22 @@ _*.md
 _*.pid
 _*.db
 
+# Migration rehearsal / backup artefacts. `server/_db_migrate.py` writes these
+# next to the database it is inspecting:
+#   <db>.backup-<timestamp>   a pre-migration copy
+#   <db>.migration-dryrun     the throwaway copy the rehearsal runs against
+# Neither is source, and a backup of someone's real balances has no business in
+# git history. `_*.db` above does not catch these because they do not END in
+# `.db`.
+*.db.backup-*
+*.db.migration-dryrun
+*.db-wal
+*.db-shm
+
+# Test result captures. The runner writes these next to the test module.
+server/test_*_result.txt
+server/*_result.txt
+
 # Tooling directories
 .godot/
 .vscode/

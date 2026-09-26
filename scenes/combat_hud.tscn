@@ -1,0 +1,63 @@
+[gd_scene format=3 uid="uid://ddgi8rqy3c4gd"]
+
+[ext_resource type="Script" uid="uid://bxtdeq4svokc2" path="res://scripts/combat_hud.gd" id="1"]
+
+[node name="CombatHUD" type="CanvasLayer" unique_id=1729774623]
+script = ExtResource("1")
+
+[node name="Panel" type="Panel" parent="." unique_id=1129116947]
+visible = false
+offset_left = 822.0
+offset_top = 599.0
+offset_right = 1262.0
+offset_bottom = 706.0
+
+[node name="Ammo" type="Label" parent="Panel" unique_id=378060619]
+visible = false
+layout_mode = 0
+offset_left = 20.0
+offset_top = 10.0
+text = "Aktif: RLX-1"
+
+[node name="Count" type="Label" parent="Panel" unique_id=1353198249]
+visible = false
+layout_mode = 0
+offset_left = 20.0
+offset_top = 35.0
+text = "Miktar: 50000"
+
+[node name="Buttons" type="HBoxContainer" parent="Panel" unique_id=1814684822]
+visible = false
+layout_mode = 0
+offset_left = 20.0
+offset_top = 70.0
+
+[node name="RLX1" type="Button" parent="Panel/Buttons" unique_id=1444630733]
+visible = false
+layout_mode = 2
+text = "RLX-1"
+
+[node name="GLX2" type="Button" parent="Panel/Buttons" unique_id=790241415]
+visible = false
+layout_mode = 2
+text = "GLX-2"
+
+[node name="BLX3" type="Button" parent="Panel/Buttons" unique_id=1348746467]
+visible = false
+layout_mode = 2
+text = "BLX-3"
+
+[node name="WLX4" type="Button" parent="Panel/Buttons" unique_id=149018004]
+visible = false
+layout_mode = 2
+text = "WLX-4"
+
+[node name="SAB" type="Button" parent="Panel/Buttons" unique_id=1217357647]
+visible = false
+layout_mode = 2
+text = "SAB"
+
+[node name="RSB" type="Button" parent="Panel/Buttons" unique_id=1147611466]
+visible = false
+layout_mode = 2
+text = "RSB"
