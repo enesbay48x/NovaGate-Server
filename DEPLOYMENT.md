@@ -168,3 +168,51 @@ python -m pytest tests -q    # full server suite
 `_check_secrets.py` scans the working tree - including files Git has not staged
 yet - for `.env` files, literal `SECRET_KEY`/`password` assignments, database
 URLs with inline passwords, private key blocks and common token formats.
+
+---
+
+## 9. Verifying a deployment
+
+A successful `git push` says nothing about what is being served. A service that
+failed to build keeps answering `/health` from the PREVIOUS build, so the only
+reliable evidence is the deployed OpenAPI document.
+
+```bash
+cd server
+
+# Blocks until the new build is actually serving. Exits 1 on timeout.
+python _wait_for_deploy.py https://novagate-server-1.onrender.com
+
+# Full player-facing acceptance against the live host.
+python _verify_production.py https://novagate-server-1.onrender.com
+
+# Staff-only acceptance. Credentials come from the environment so they never
+# appear in the command line, in shell history, or in a file.
+set ADMIN_USERNAME=...
+set ADMIN_PASSWORD=...
+python _verify_admin_ops.py https://novagate-server-1.onrender.com
+```
+
+`_verify_admin_ops.py` performs every economy operation against a throwaway
+account it registers itself, so no real player's balances are read or written.
+
+### Database migration
+
+`init_db()` runs the full Phase 1-7 schema on every boot and every statement is
+`CREATE ... IF NOT EXISTS` or a guarded additive column, so it is idempotent and
+cannot destroy a row. To rehearse it against a copy of a live database:
+
+```bash
+cd server
+python _db_migrate.py --db path/to/game.db            # dry run on a COPY
+python _db_migrate.py --db path/to/game.db --backup-only
+python _db_migrate.py --db path/to/game.db --apply    # backup, then apply
+python _db_migrate_selftest.py                        # proves it on a fixture
+```
+
+`--apply` refuses to run unless the rehearsal on the copy converged, and writes
+a timestamped backup (plus its WAL sidecars) before the first write.
+
+To confirm the schema is present on a running server without staff credentials,
+`_verify_production.py` probes one route per table group. A missing table raises
+500 from SQLite, so any non-500 answer is positive evidence the table exists.
