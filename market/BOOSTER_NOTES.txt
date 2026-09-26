@@ -1,0 +1,7 @@
+Boosterlar:
+DMG-B01 +%10 hasar
+HP-B01 +%10 HP
+SHD-B01 +%10 kalkan
+XP-B01 +%10 XP
+HON-B01 +%10 şeref
+Hepsi 15.000 PLT, 3 saat, 1 adet.

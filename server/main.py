@@ -1436,6 +1436,49 @@ class MarketBuyRequest(BaseModel):
     transaction_id: str = Field("", max_length=128)
 
 
+def _market_ok(btc: int, plt: int, gold: int, inventory: dict,
+               message: str, purchase: dict | None = None) -> dict:
+    """Successful /market/buy response.
+
+    `basarili` and `mesaj` are ALIASES of `success` and `message`. The Godot
+    market screen gates every purchase on `result.get("basarili", false)`, so a
+    response carrying only the English keys made the client read a successful
+    purchase as a failure: the balance was debited here, but the client bailed
+    out before save_game() and before the equipment refresh, so the item never
+    appeared. Emitting both keeps one contract for every client version and
+    never removes an existing key.
+    """
+    body = {
+        "success": True,
+        "basarili": True,
+        "message": message,
+        "mesaj": message,
+        "btc": btc,
+        "plt": plt,
+        "gold": gold,
+        "inventory": inventory,
+        # Transport succeeded, so the offline client fallback must stay off.
+        "server_erisilemez": False,
+    }
+    if purchase is not None:
+        body["purchase"] = purchase
+    return body
+
+
+def _market_no(btc: int, plt: int, gold: int, message: str) -> dict:
+    """Refused /market/buy: nothing charged, nothing delivered."""
+    return {
+        "success": False,
+        "basarili": False,
+        "message": message,
+        "mesaj": message,
+        "btc": btc,
+        "plt": plt,
+        "gold": gold,
+        "server_erisilemez": False,
+    }
+
+
 @app.post("/market/buy")
 async def market_buy(request: Request, req: MarketBuyRequest, account: dict = Depends(get_current_account)):
     """Server-authoritative market purchase.
@@ -1473,14 +1516,13 @@ async def market_buy(request: Request, req: MarketBuyRequest, account: dict = De
                 (account["player_id"],),
             )
             inv_rows = await cursor.fetchall()
-            return {
-                "success": True,
-                "message": "Transaction already processed (idempotent replay)",
-                "btc": bal_row[0] if bal_row else 0,
-                "plt": bal_row[1] if bal_row else 0,
-                "gold": bal_row[2] if bal_row else 0,
-                "inventory": normalize_inventory({r[0]: r[1] for r in inv_rows}),
-            }
+            return _market_ok(
+                bal_row[0] if bal_row else 0,
+                bal_row[1] if bal_row else 0,
+                bal_row[2] if bal_row else 0,
+                normalize_inventory({r[0]: r[1] for r in inv_rows}),
+                "Transaction already processed (idempotent replay)",
+            )
 
         # 1. Validate item against server catalog.
         # Phase 1: the client id is folded onto the canonical id first, so
@@ -1529,24 +1571,16 @@ async def market_buy(request: Request, req: MarketBuyRequest, account: dict = De
 
         if server_currency == "BTC":
             if btc < server_price:
-                return {
-                    "success": False,
-                    "message": f"Insufficient BTC. Required: {server_price}, Available: {btc}",
-                    "btc": btc,
-                    "plt": plt,
-                    "gold": gold,
-                }
+                return _market_no(btc, plt, gold, (
+                    f"Insufficient BTC. Required: {server_price}, "
+                    f"Available: {btc}"))
             new_btc = btc - server_price
             new_plt = plt
         elif server_currency == "PLT":
             if plt < server_price:
-                return {
-                    "success": False,
-                    "message": f"Insufficient PLT. Required: {server_price}, Available: {plt}",
-                    "btc": btc,
-                    "plt": plt,
-                    "gold": gold,
-                }
+                return _market_no(btc, plt, gold, (
+                    f"Insufficient PLT. Required: {server_price}, "
+                    f"Available: {plt}"))
             new_btc = btc
             new_plt = plt - server_price
         else:
@@ -1619,20 +1653,20 @@ async def market_buy(request: Request, req: MarketBuyRequest, account: dict = De
         # Phase 1: the response mirrors /player/inventory - canonical ids only.
         server_inventory = normalize_inventory({r[0]: r[1] for r in inv_rows})
 
-        return {
-            "success": True,
-            "message": f"{server_item_id} purchased",
-            "btc": new_btc,
-            "plt": new_plt,
-            "gold": gold,
-            "inventory": server_inventory,
-            "purchase": {
+        return _market_ok(
+            new_btc,
+            new_plt,
+            gold,
+            server_inventory,
+            f"{server_item_id} purchased",
+            {
                 "item_id": server_item_id,
                 "price": server_price,
                 "currency": server_currency,
                 "transaction_id": tx_id,
+                "quantity": 1,
             },
-        }
+        )
 
 
 @app.get("/player/full")

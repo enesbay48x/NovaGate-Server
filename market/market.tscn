@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://nw5uisgtgv57"]
+
+[ext_resource type="Script" uid="uid://cfjrh380isfjp" path="res://market/market.gd" id="1_market"]
+
+[node name="Market" type="Control" unique_id=1311633038]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 0
+offset_right = 1280.0
+offset_bottom = 720.0
+script = ExtResource("1_market")

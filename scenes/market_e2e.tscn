@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c0mktbuy0e2es"]
+
+[ext_resource type="Script" path="res://scripts/market_e2e_driver.gd" id="1_driver"]
+
+[node name="MarketE2E" type="Node"]
+script = ExtResource("1_driver")

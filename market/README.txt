@@ -1,0 +1,1 @@
+NovaGate Market V5 - gemi kartları ve görsel gösterimi.

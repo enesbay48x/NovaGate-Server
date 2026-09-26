@@ -1,0 +1,328 @@
+{
+  "categories": [
+    "Gemiler",
+    "Lazer",
+    "Kalkan",
+    "Hiz",
+    "Extra",
+    "Droid",
+    "Cephane"
+  ],
+  "items": [
+    {
+      "id": "lf1",
+      "name": "LF1",
+      "category": "Lazer",
+      "price": 40000,
+      "currency": "BTC"
+    },
+    {
+      "id": "lf2",
+      "name": "LF2",
+      "category": "Lazer",
+      "price": 80000,
+      "currency": "BTC"
+    },
+    {
+      "id": "lf3",
+      "name": "LF3",
+      "category": "Lazer",
+      "price": 20000,
+      "currency": "PLT"
+    },
+    {
+      "id": "kalkan1",
+      "name": "Kalkan 1",
+      "category": "Kalkan",
+      "price": 125000,
+      "currency": "BTC"
+    },
+    {
+      "id": "kalkan2",
+      "name": "Kalkan 2",
+      "category": "Kalkan",
+      "price": 15000,
+      "currency": "PLT"
+    },
+    {
+      "id": "hiz1",
+      "name": "Hiz 1",
+      "category": "Hiz",
+      "price": 125000,
+      "currency": "BTC"
+    },
+    {
+      "id": "hiz2",
+      "name": "Hiz 2",
+      "category": "Hiz",
+      "price": 10000,
+      "currency": "PLT"
+    },
+    {
+      "id": "x1_1000",
+      "name": "X1 1000",
+      "category": "Cephane",
+      "quantity": 1000,
+      "price": 4500,
+      "currency": "BTC"
+    },
+    {
+      "id": "x1_10000",
+      "name": "X1 10000",
+      "category": "Cephane",
+      "quantity": 10000,
+      "price": 45000,
+      "currency": "BTC"
+    },
+    {
+      "id": "x1_100000",
+      "name": "X1 100000",
+      "category": "Cephane",
+      "quantity": 100000,
+      "price": 450000,
+      "currency": "BTC"
+    },
+    {
+      "id": "x2_1000",
+      "name": "X2 1000",
+      "category": "Cephane",
+      "quantity": 1000,
+      "price": 450000,
+      "currency": "BTC"
+    },
+    {
+      "id": "x2_10000",
+      "name": "X2 10000",
+      "category": "Cephane",
+      "quantity": 10000,
+      "price": 4500000,
+      "currency": "BTC"
+    },
+    {
+      "id": "x2_100000",
+      "name": "X2 100000",
+      "category": "Cephane",
+      "quantity": 100000,
+      "price": 45000000,
+      "currency": "BTC"
+    },
+    {
+      "id": "x3_1000",
+      "name": "X3 1000",
+      "category": "Cephane",
+      "quantity": 1000,
+      "price": 900,
+      "currency": "PLT"
+    },
+    {
+      "id": "x3_10000",
+      "name": "X3 10000",
+      "category": "Cephane",
+      "quantity": 10000,
+      "price": 9000,
+      "currency": "PLT"
+    },
+    {
+      "id": "x3_100000",
+      "name": "X3 100000",
+      "category": "Cephane",
+      "quantity": 100000,
+      "price": 90000,
+      "currency": "PLT"
+    },
+    {
+      "id": "x4_1000",
+      "name": "X4 1000",
+      "category": "Cephane",
+      "quantity": 1000,
+      "price": 2700,
+      "currency": "PLT"
+    },
+    {
+      "id": "x4_10000",
+      "name": "X4 10000",
+      "category": "Cephane",
+      "quantity": 10000,
+      "price": 27000,
+      "currency": "PLT"
+    },
+    {
+      "id": "x4_100000",
+      "name": "X4 100000",
+      "category": "Cephane",
+      "quantity": 100000,
+      "price": 270000,
+      "currency": "PLT"
+    },
+    {
+      "id": "sab_1000",
+      "name": "SAB 1000",
+      "category": "Cephane",
+      "quantity": 1000,
+      "price": 500,
+      "currency": "PLT"
+    },
+    {
+      "id": "sab_10000",
+      "name": "SAB 10000",
+      "category": "Cephane",
+      "quantity": 10000,
+      "price": 5000,
+      "currency": "PLT"
+    },
+    {
+      "id": "sab_100000",
+      "name": "SAB 100000",
+      "category": "Cephane",
+      "quantity": 100000,
+      "price": 50000,
+      "currency": "PLT"
+    },
+    {
+      "id": "rsb_1000",
+      "name": "RSB 1000",
+      "category": "Cephane",
+      "quantity": 1000,
+      "price": 4500,
+      "currency": "PLT"
+    },
+    {
+      "id": "rsb_10000",
+      "name": "RSB 10000",
+      "category": "Cephane",
+      "quantity": 10000,
+      "price": 45000,
+      "currency": "PLT"
+    },
+    {
+      "id": "rsb_100000",
+      "name": "RSB 100000",
+      "category": "Cephane",
+      "quantity": 100000,
+      "price": 450000,
+      "currency": "PLT"
+    },
+    {
+      "id": "r1_50",
+      "name": "R1 50",
+      "category": "Cephane",
+      "quantity": 50,
+      "price": 2250,
+      "currency": "BTC"
+    },
+    {
+      "id": "r1_500",
+      "name": "R1 500",
+      "category": "Cephane",
+      "quantity": 500,
+      "price": 22500,
+      "currency": "BTC"
+    },
+    {
+      "id": "r1_5000",
+      "name": "R1 5000",
+      "category": "Cephane",
+      "quantity": 5000,
+      "price": 225000,
+      "currency": "BTC"
+    },
+    {
+      "id": "r2_50",
+      "name": "R2 50",
+      "category": "Cephane",
+      "quantity": 50,
+      "price": 22500,
+      "currency": "BTC"
+    },
+    {
+      "id": "r2_500",
+      "name": "R2 500",
+      "category": "Cephane",
+      "quantity": 500,
+      "price": 225000,
+      "currency": "BTC"
+    },
+    {
+      "id": "r2_5000",
+      "name": "R2 5000",
+      "category": "Cephane",
+      "quantity": 5000,
+      "price": 2250000,
+      "currency": "BTC"
+    },
+    {
+      "id": "r3_50",
+      "name": "R3 50",
+      "category": "Cephane",
+      "quantity": 50,
+      "price": 225,
+      "currency": "PLT"
+    },
+    {
+      "id": "r3_500",
+      "name": "R3 500",
+      "category": "Cephane",
+      "quantity": 500,
+      "price": 2250,
+      "currency": "PLT"
+    },
+    {
+      "id": "r3_5000",
+      "name": "R3 5000",
+      "category": "Cephane",
+      "quantity": 5000,
+      "price": 22500,
+      "currency": "PLT"
+    },
+    {
+      "id": "dmg_b01",
+      "name": "DMG-B01 Hasar Booster",
+      "category": "Extra",
+      "price": 15000,
+      "currency": "PLT",
+      "description": "Lazer ve roket hasarını %10 artırır. Süre: 3 Saat.",
+      "icon": "res://market/assets/boosters/DMG-B01.png",
+      "duration": 10800
+    },
+    {
+      "id": "hp_b01",
+      "name": "HP-B01 Can Booster",
+      "category": "Extra",
+      "price": 15000,
+      "currency": "PLT",
+      "description": "Maksimum canı %10 artırır. Süre: 3 Saat.",
+      "icon": "res://market/assets/boosters/HP-B01.png",
+      "duration": 10800
+    },
+    {
+      "id": "shd_b01",
+      "name": "SHD-B01 Kalkan Booster",
+      "category": "Extra",
+      "price": 15000,
+      "currency": "PLT",
+      "description": "Maksimum kalkanı %10 artırır. Süre: 3 Saat.",
+      "icon": "res://market/assets/boosters/SHD-B01.png",
+      "duration": 10800
+    },
+    {
+      "id": "xp_b01",
+      "name": "XP-B01 Deneyim Booster",
+      "category": "Extra",
+      "price": 15000,
+      "currency": "PLT",
+      "description": "Kazanılan deneyimi %10 artırır. Süre: 3 Saat.",
+      "icon": "res://market/assets/boosters/XP-B01.png",
+      "duration": 10800
+    },
+    {
+      "id": "hon_b01",
+      "name": "HON-B01 Şeref Booster",
+      "category": "Extra",
+      "price": 15000,
+      "currency": "PLT",
+      "description": "Kazanılan şerefi %10 artırır. Süre: 3 Saat.",
+      "icon": "res://market/assets/boosters/HON-B01.png",
+      "duration": 10800
+    }
+  ]
+}

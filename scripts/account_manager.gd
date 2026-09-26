@@ -1423,7 +1423,8 @@ func server_market_buy(kind: String, item_id: String) -> Dictionary:
 	if username == "":
 		return {
 			"basarili": false,
-			"mesaj": "Aktif oyuncu bulunamadı."
+			"mesaj": "Aktif oyuncu bulunamadı.",
+			"server_erisilemez": false
 		}
 
 	var http := HTTPRequest.new()
@@ -1455,7 +1456,9 @@ func server_market_buy(kind: String, item_id: String) -> Dictionary:
 		http.queue_free()
 		return {
 			"basarili": false,
-			"mesaj": "Market sunucusuna bağlanılamadı. Hata: %s" % str(err)
+			"mesaj": "Market sunucusuna bağlanılamadı. Hata: %s" % str(err),
+			# Sunucuya hiç ulaşılamadı: yerel ekonomi yedeği burada geçerlidir.
+			"server_erisilemez": true
 		}
 
 	var result: Array = await http.request_completed
@@ -1469,7 +1472,9 @@ func server_market_buy(kind: String, item_id: String) -> Dictionary:
 	if request_result != HTTPRequest.RESULT_SUCCESS:
 		return {
 			"basarili": false,
-			"mesaj": "Market sunucu isteği tamamlanamadı. Kod: %s" % str(request_result)
+			"mesaj": "Market sunucu isteği tamamlanamadı. Kod: %s" % str(request_result),
+			# Taşıma katmanı hata verdi: sunucuya ulaşılamadı.
+			"server_erisilemez": true
 		}
 
 	var data = JSON.parse_string(resp_body)
@@ -1480,10 +1485,30 @@ func server_market_buy(kind: String, item_id: String) -> Dictionary:
 			err_msg = str(data.get("detail", err_msg))
 		return {
 			"basarili": false,
-			"mesaj": err_msg
+			"mesaj": err_msg,
+			# The server DID answer (with a rejection), so the caller must not
+			# fall back to the local economy - only an unreachable server may.
+			"server_erisilemez": false
 		}
 
-	if bool(data.get("success", data.get("basarili", false))):
+	# --- CEVAP SOZLESMESI NORMALIZASYONU -----------------------------------
+	# Sunucu İngilizce yanıt verir ("success" / "message"). market.gd içindeki
+	# HER satın alma kapısı ise "basarili" / "mesaj" okur. Sunucu "basarili"
+	# göndermediği için result.get("basarili", false) her zaman false dönüyor,
+	# yani BAŞARILI bir satın alma istemci tarafında BAŞARISIZ sayılıyordu:
+	#  - GlobalState.save_game() hiç çağrılmıyordu,
+	#  - ekipman/UI yenilemesi hiç yapılmıyordu,
+	#  - item envanterde hiç gösterilmiyordu,
+	# halbuki sunucu parayı düşmüş ve item'ı DB'ye yazmıştı.
+	# Bu, sunucunun döndüğü yanıtı UI'ın zaten okuduğu anahtarlara katlar.
+	var server_ok := bool(data.get("success", data.get("basarili", false)))
+	data["basarili"] = server_ok
+	if not data.has("mesaj"):
+		data["mesaj"] = str(data.get("message", ""))
+	if not server_ok and str(data["mesaj"]).is_empty():
+		data["mesaj"] = "Satın alma başarısız."
+
+	if server_ok:
 		# Sunucu yeni bakiyeleri döndürür; Seyir Defteri için fark önce
 		# okunur, sonra bakiye uygulanır (satın alma: negatif delta).
 		var previous_btc := int(GlobalState.bitcoin)
@@ -1509,10 +1534,17 @@ func server_market_buy(kind: String, item_id: String) -> Dictionary:
 			"bitcoin": GlobalState.bitcoin,
 			"plt": GlobalState.platinum,
 			"is_admin": GlobalState.is_admin,
-			"owned_ships": data.get("owned_ships", []),
-			"inventory": data.get("inventory", {}),
-			"droid_types": data.get("droid_types", [])
+			"inventory": data.get("inventory", {})
 		}
+		# /market/buy yalnızca envanter ve bakiye döndürür; "owned_ships" veya
+		# "droid_types" YOKTUR. Bu iki alanı her zaman geçersiz kılmak, her
+		# satın almada oyuncunun tüm gemi ve dro'idini SİLMEYE yol açardı
+		# (sync_server_player_to_local gelen listeyi olduğu gibi uygular).
+		# Yalnızca sunucu gerçekten döndüyse eklenir.
+		if data.has("owned_ships"):
+			oyuncu["owned_ships"] = data.get("owned_ships", [])
+		if data.has("droid_types"):
+			oyuncu["droid_types"] = data.get("droid_types", [])
 		sync_server_player_to_local(oyuncu)
 
 	return data

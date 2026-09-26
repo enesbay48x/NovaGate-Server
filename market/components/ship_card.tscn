@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[ext_resource path="res://market/components/ship_card.gd" type="Script" id="1"]
+
+[node name="ShipCard" type="VBoxContainer"]
+script=ExtResource("1")
+
+[node name="Image" type="TextureRect" parent="."]
+custom_minimum_size=Vector2(180,120)
+
+[node name="Info" type="Label" parent="."]
