@@ -24,6 +24,8 @@ from fastapi import HTTPException, Request, status, WebSocket
 from pydantic import BaseModel
 from starlette.websockets import WebSocketState
 
+import journal
+
 
 # ---------------------------------------------------------------------------
 # Constants (duplicated from config to avoid circular import)
@@ -41,6 +43,12 @@ HEARTBEAT_TIMEOUT = 30
 TICK_INTERVAL = 1.0 / WORLD_TICK_HZ
 WORLD_RECT_MIN = (-MAP_WIDTH / 2.0, -MAP_HEIGHT / 2.0)
 WORLD_RECT_MAX = (MAP_WIDTH / 2.0, MAP_HEIGHT / 2.0)
+
+# Fallback used when `configure()` is called without a path. Matches the
+# default in config.py so the journal writes to the same file as the auth API.
+_DEFAULT_DB_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "data", "novagate.db"
+)
 
 
 def _unix_now() -> int:
@@ -87,6 +95,10 @@ class PlayerSession:
     connected_at: float = field(default_factory=time.time)
     websocket: WebSocket = None
     disconnected: bool = False
+    # Phase 1: background task replaying the journal on connect. Held on the
+    # session (rather than fired and forgotten) so the event loop keeps a
+    # strong reference and the task cannot be garbage collected mid-await.
+    journal_sync_task: Optional[asyncio.Task] = None
 
     @property
     def position(self) -> tuple[float, float]:
@@ -106,7 +118,9 @@ class ConnectionManager:
 
     def configure(self, secret_key: str, db_path: str):
         self.secret_key = secret_key
-        self.db_path = db_path
+        # An empty db_path must never be stored: every journal write resolves
+        # through it, and an empty string would silently create/skip a file.
+        self.db_path = db_path or _DEFAULT_DB_PATH
 
     async def _kick_locked(self, player: "PlayerSession", reason: str) -> None:
         """Kick an existing session (caller must hold self._lock).
@@ -433,6 +447,86 @@ async def broadcast_world_state():
             await manager.drop(player)
 
 
+async def send_journal_event(player: "PlayerSession", event: dict) -> bool:
+    """Push one `journal_event` frame to a single player's socket.
+
+    Phase 1: the Seyir Defteri is server-authored. This is only the transport;
+    the event must already be persisted by `journal.record_event`, so a failed
+    send can never create a history the server does not know about.
+
+    Returns False when the socket is gone, in which case the caller should drop
+    the session - the entry is still stored and will be replayed on next login.
+    """
+    if player is None or player.websocket is None:
+        return False
+    if player.websocket.application_state != WebSocketState.CONNECTED:
+        return False
+    try:
+        await player.websocket.send_text(json.dumps(event))
+        return True
+    except Exception:
+        await manager.drop(player)
+        return False
+
+
+async def record_and_push_journal(
+    player: "PlayerSession",
+    event_type: str,
+    message: str,
+    severity: str = "info",
+    details: Optional[dict] = None,
+) -> Optional[dict]:
+    """Persist a journal entry and push it to the player's live socket.
+
+    The single call site gameplay code should use. Persistence happens first and
+    a DB failure is swallowed (the entry is lost, the action is NOT rolled back)
+    so a journal problem can never break combat or movement.
+    """
+    if player is None or not player.player_id:
+        return None
+    db_path = manager.db_path
+    if not db_path:
+        return None
+    try:
+        async with aiosqlite.connect(db_path) as db:
+            event = await journal.record_event(
+                db, player.player_id, event_type, message, severity, details
+            )
+            await db.commit()
+    except Exception:
+        return None
+    await send_journal_event(player, event)
+    return event
+
+
+async def _send_journal_history(websocket: WebSocket, player: "PlayerSession") -> None:
+    """Push the persisted journal to a freshly connected player.
+
+    Sent as one `journal_sync` frame right after the `welcome` handshake, so a
+    reconnecting client rebuilds the same logbook it had before it dropped. A DB
+    failure here must never break the connection, so it is swallowed.
+    """
+    if websocket is None or websocket.application_state != WebSocketState.CONNECTED:
+        return
+    db_path = manager.db_path
+    if not db_path or not player.player_id:
+        return
+    try:
+        async with aiosqlite.connect(db_path) as db:
+            events = await journal.list_events(db, player.player_id)
+    except Exception:
+        return
+    if not events:
+        return
+    try:
+        await websocket.send_text(json.dumps({
+            "type": "journal_sync",
+            "events": events,
+        }))
+    except Exception:
+        pass
+
+
 async def start_world_loop():
     """Start the world tick loop."""
     global _world_task
@@ -489,6 +583,18 @@ def register_websocket_routes(app, secret_key: str = "", db_path: str = ""):
             }))
         except Exception:
             pass
+
+        # Phase 1: replay the persisted Seyir Defteri so the client starts with
+        # the server's history instead of an empty (or stale local) logbook.
+        #
+        # Sent as a background task, NOT awaited inline. The journal replay is a
+        # disk read, and awaiting it here would delay the start of the receive
+        # loop - a client that sends its first `input` frame immediately would
+        # have that frame sit unprocessed for the duration of the query. The
+        # task is stored on the session so it cannot be garbage collected.
+        player.journal_sync_task = asyncio.create_task(
+            _send_journal_history(websocket, player)
+        )
 
         # Send the initial world snapshot immediately. The world loop will
         # continue broadcasting subsequent updates after this handshake.
@@ -593,9 +699,20 @@ def register_websocket_routes(app, secret_key: str = "", db_path: str = ""):
                     # Server-authoritative map change: only known maps accepted.
                     new_map = str(msg.get("map_id", "")).strip()
                     if _is_valid_map_id(new_map):
+                        previous_map = player.map_id
                         if new_map != player.map_id:
                             player.map_id = new_map
                             await npc_manager.spawn_map_npcs(new_map)
+                            # Phase 1: a real map transition is a journal event.
+                            # Journalled AFTER the authoritative state changed, so
+                            # the entry can only ever describe a map the player
+                            # really reached.
+                            await record_and_push_journal(
+                                player, journal.EVENT_MAP_ENTER,
+                                f"Harita {new_map} girildi",
+                                journal.SEVERITY_INFO,
+                                {"map_id": new_map, "from_map": previous_map},
+                            )
                         try:
                             await websocket.send_text(json.dumps({
                                 "type": "map_changed",
@@ -815,6 +932,50 @@ SAB_SHIELD_FACTOR = 2.0
 FIRE_COOLDOWN_SECONDS = 0.3  # Minimum time between shots from same player
 MAX_LASER_DAMAGE = 100000.0  # Anti-cheat cap on damage
 
+
+# ---------------------------------------------------------------------------
+# Phase 2/4 - progression applied on an NPC death
+# ---------------------------------------------------------------------------
+async def apply_npc_kill_progression(db_path: str, player_id: str,
+                                    reward: dict, map_id: str) -> None:
+    """Apply XP, honor, the kill counter and quest progress after an NPC dies.
+
+    Called from the NPC manager only AFTER `_grant_server_currency` has
+    confirmed the BTC/PLT payout, so the whole chain is "kill -> reward -> XP ->
+    honor -> stats -> journal -> quest".
+
+    The XP and honor amounts are read from the SERVER's own reward dict; nothing
+    here trusts a client value. Failures are swallowed deliberately: a
+    progression write must never undo a reward the player already received.
+    """
+    try:
+        import player_state
+        from routes_p45 import _advance_quest
+
+        async with aiosqlite.connect(db_path) as db:
+            await player_state.add_kill(db, player_id, "npc")
+            leveled, old_level, new_level, _ = await player_state.add_xp(
+                db, player_id, int(reward.get("xp", 0) or 0)
+            )
+            if int(reward.get("honor", 0) or 0):
+                await player_state.add_honor(
+                    db, player_id, int(reward["honor"])
+                )
+            if leveled:
+                await journal.record_event(
+                    db, player_id, journal.EVENT_LEVEL_UP,
+                    f"Seviye atlandi: {new_level}", journal.SEVERITY_GOOD,
+                    {"from": old_level, "to": new_level,
+                     "trigger": "npc_kill"},
+                )
+            await _advance_quest(db, player_id, "npc_kill",
+                                 extra={"map_id": map_id})
+            await db.commit()
+    except Exception as exc:  # pragma: no cover - defensive
+        print(f"[NOVAGATE] npc progression skipped player={player_id} "
+              f"err={exc}", flush=True)
+
+
 # Server-authoritative map whitelist (map isolation: players only ever share
 # a map_id that this server recognizes).
 VALID_MAP_IDS: set[str] = (
@@ -927,6 +1088,24 @@ async def handle_player_fire(attacker: "PlayerSession", target_player_id: str,
         target.hp = target.max_hp
         target.shield = target.max_shield
         event["respawn"] = True
+
+        # Phase 1: PvP is journalled server-side. The killer and the victim each
+        # get their own entry - the client cannot author either one, which is
+        # what makes "kim kimi öldürdü" in the Seyir Defteri trustworthy.
+        # `record_and_push_journal` swallows its own failures, so a journal
+        # problem can never break the combat pipeline.
+        await record_and_push_journal(
+            attacker, journal.EVENT_PLAYER_KILL,
+            f"{target.username} vuruldu", journal.SEVERITY_GOOD,
+            {"victim": target.username, "target_id": target.player_id,
+             "weapon": weapon},
+        )
+        await record_and_push_journal(
+            target, journal.EVENT_DEATH,
+            f"{attacker.username} tarafindan oldun", journal.SEVERITY_BAD,
+            {"killer": attacker.username, "killer_id": attacker.player_id,
+             "weapon": weapon},
+        )
 
     return event
 
@@ -1152,6 +1331,31 @@ class NPCManager:
                     _revive_npc_after_failed_reward(closest_npc)
                     return None
                 event["npc_type"] = closest_npc.npc_type
+
+                # Phase 1: the kill is journalled only AFTER the payout
+                # succeeded, so the Seyir Defteri can never advertise a reward
+                # the economy table does not contain.
+                await record_and_push_journal(
+                    player, journal.EVENT_NPC_KILL,
+                    f"{closest_npc.npc_type} imha edildi",
+                    journal.SEVERITY_GOOD,
+                    {
+                        "npc_type": closest_npc.npc_type,
+                        "npc_id": closest_npc.npc_id,
+                        "map_id": closest_npc.map_id,
+                        "reward": reward,
+                    },
+                )
+
+                # Phase 2/4: XP, honor, the kill counter, the level-up journal
+                # entry and any active quest all follow from this one death.
+                # The BTC/PLT above are untouched, and the XP/honor amounts come
+                # from the SERVER reward table, never from the client.
+                # manager.db_path is the same path _grant_server_currency just
+                # wrote the payout to, so both halves land in one database.
+                await apply_npc_kill_progression(
+                    manager.db_path, player_id, reward, closest_npc.map_id,
+                )
 
             return event
 

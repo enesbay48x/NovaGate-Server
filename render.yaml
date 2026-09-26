@@ -1,8 +1,51 @@
+# NovaGate - Render blueprint
+#
+# This is a TEMPLATE, not a secret store. Every sensitive value is declared
+# `sync: false`, which means Render shows a blank field in its dashboard and
+# the value must be typed in by hand. Nothing below is a real credential, and
+# `server/_check_secrets.py` fails if one ever is.
+
 services:
   - type: web
     name: novagate-server
     runtime: python
     plan: starter
+    branch: main
+    autoDeploy: true
     buildCommand: pip install -r server/requirements.txt
     startCommand: uvicorn main:app --app-dir server --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
+    envVars:
+      # --- secrets: set these in the Render dashboard, never in git -----
+      - key: SECRET_KEY
+        sync: false
+        description: >-
+          JWT signing key. Generate with:
+          python -c "import secrets; print(secrets.token_urlsafe(48))"
+      - key: ADMIN_USERNAME
+        sync: false
+        description: Username of the bootstrapped superadmin account.
+      - key: ADMIN_PASSWORD
+        sync: false
+        description: Password for that account; bcrypt-hashed on first boot.
+      - key: ADMIN_ROLE
+        value: superadmin
+        description: Role granted to the bootstrapped account.
+
+      # --- non-secret configuration -------------------------------------
+      - key: PYTHON_VERSION
+        value: "3.12.10"
+      - key: ACCESS_TOKEN_EXPIRE_SECONDS
+        value: "900"
+      - key: REFRESH_TOKEN_EXPIRE_SECONDS
+        value: "604800"
+      - key: RATE_LIMIT_LOGIN
+        value: "5/minute"
+      - key: RATE_LIMIT_REGISTER
+        value: "3/minute"
+      # The world loop runs at 20 Hz. Changing this changes movement feel and
+      # the heartbeat budget, so it is pinned rather than left to the default.
+      - key: WORLD_TICK_HZ
+        value: "20"
+      - key: TICK_RATE
+        value: "0.05"

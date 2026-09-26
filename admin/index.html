@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>NovaGate Admin Panel</title>
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<!--
+  LOGIN
+  The panel asks only for a username and password. It does NOT ask for a role,
+  an "is admin" toggle, or a permission list: the role is read back from the
+  server after login, from the accounts table. A client-side flag could never
+  grant authority anyway - every admin endpoint re-checks the permission
+  server-side - but the panel does not pretend otherwise either.
+-->
+<div id="login">
+  <form class="login-card" id="loginForm">
+    <h1>NOVAGATE</h1>
+    <p class="sub">Admin Panel &mdash; server-authoritative control</p>
+    <label for="username">Username</label>
+    <input type="text" id="username" autocomplete="username" required>
+    <label for="password">Password</label>
+    <input type="password" id="password" autocomplete="current-password" required>
+    <button type="submit">Sign in</button>
+    <div class="login-error" id="loginError"></div>
+  </form>
+</div>
+
+<!--
+  APP
+  Hidden until the server confirms the session. The left menu is built from
+  MENU in admin.js and each entry is hidden unless the server granted the
+  permission it requires.
+-->
+<div id="app">
+  <aside id="sidebar">
+    <div class="brand">NOVAGATE</div>
+    <div class="who" id="who"></div>
+    <nav id="nav"></nav>
+  </aside>
+  <main id="main">
+    <header class="top">
+      <h2 id="viewTitle">Dashboard</h2>
+      <span class="role" id="roleBadge"></span>
+    </header>
+    <div id="content"></div>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script src="admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+/* ==========================================================================
+   NOVAGATE ADMIN PANEL
+   --------------------------------------------------------------------------
+   The base URL is NOT hard-coded. It is resolved at runtime, in this order:
+     1. a `?api=` query parameter        (handy for testing)
+     2. window.__NOVAGATE_API__         (set by a deployment config)
+     3. the panel's own origin
+   That is what keeps a production build from pointing at localhost: there is
+   no localhost string anywhere in this codebase to bake in.
+   ========================================================================== */
+
+:root {
+  --bg: #0b0f1a; --bg-2: #111827; --bg-3: #1a2333; --panel: #151d2e;
+  --line: #24304a; --text: #e6edf7; --muted: #8b9ab5;
+  --accent: #00d4ff; --accent-2: #7c5cff;
+  --good: #22c55e; --warn: #f59e0b; --bad: #ef4444;
+  --radius: 10px; --sidebar: 232px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 14px/1.5 "Segoe UI", Inter, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+code, .mono { font-family: "Cascadia Mono", Consolas, monospace; }
+
+/* ---------- login ---------- */
+#login {
+  position: fixed; inset: 0; display: grid; place-items: center;
+  background: radial-gradient(circle at 30% 20%, #16233d 0%, var(--bg) 60%);
+  z-index: 100;
+}
+#login.hidden { display: none; }
+.login-card {
+  width: min(400px, 92vw); padding: 32px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .55);
+}
+.login-card h1 {
+  font-size: 22px; letter-spacing: 3px; margin-bottom: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.login-card p.sub { color: var(--muted); font-size: 12px; margin-bottom: 24px; }
+.login-card label { display: block; font-size: 11px; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--muted); margin: 14px 0 6px; }
+.login-card input {
+  width: 100%; padding: 11px 13px; background: var(--bg-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px; font-size: 14px;
+}
+.login-card input:focus { outline: none; border-color: var(--accent); }
+.login-card button {
+  width: 100%; margin-top: 22px; padding: 12px; border: 0; cursor: pointer;
+  border-radius: 8px; font-size: 14px; font-weight: 600; color: #04121c;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+.login-error { color: var(--bad); font-size: 12px; margin-top: 12px; min-height: 16px; }
+
+/* ---------- layout ---------- */
+#app { display: none; min-height: 100%; }
+#app.ready { display: block; }
+#sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0; width: var(--sidebar);
+  background: var(--bg-2); border-right: 1px solid var(--line);
+  padding: 18px 0; overflow-y: auto; z-index: 20;
+}
+#sidebar .brand {
+  padding: 0 18px 16px; font-size: 16px; font-weight: 700; letter-spacing: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+#sidebar .who { padding: 0 18px 14px; font-size: 11px; color: var(--muted);
+  border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+#sidebar .who b { color: var(--text); display: block; font-size: 13px; }
+#sidebar nav a {
+  display: block; padding: 9px 18px; color: var(--muted); font-size: 13px;
+  text-transform: uppercase; letter-spacing: .6px;
+  border-left: 3px solid transparent;
+}
+#sidebar nav a:hover { color: var(--text); background: var(--bg-3); }
+#sidebar nav a.active { color: var(--accent); border-left-color: var(--accent);
+  background: var(--bg-3); }
+/* A nav item the server has NOT granted is hidden rather than shown disabled:
+   the panel never offers an action that would 403. */
+#sidebar nav a[hidden] { display: none; }
+
+#main { margin-left: var(--sidebar); padding: 20px 26px 60px; }
+header.top { display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; gap: 16px; flex-wrap: wrap; }
+header.top h2 { font-size: 19px; letter-spacing: 1px; text-transform: uppercase; }
+header.top .role { padding: 4px 11px; border-radius: 999px; font-size: 11px;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  background: rgba(0, 212, 255, .14); color: var(--accent);
+  border: 1px solid var(--accent); }
+header.top .role[data-role="superadmin"] { background: rgba(124, 92, 255, .16);
+  color: #b39dff; border-color: var(--accent-2); }
+
+/* ---------- cards ---------- */
+.cards { display: grid; gap: 14px; margin-bottom: 22px;
+  grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); }
+.card { background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 15px 16px; }
+.card .k { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px;
+  color: var(--muted); margin-bottom: 7px; }
+.card .v { font-size: 25px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.card .v.ok { color: var(--good); }
+.card .v.warn { color: var(--warn); }
+.card .v.bad { color: var(--bad); }
+.card .v.small { font-size: 17px; }
+
+.panel { background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 16px; margin-bottom: 18px; }
+.panel > h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px;
+  color: var(--muted); margin-bottom: 12px; }
+
+/* ---------- controls ---------- */
+.row { display: flex; gap: 9px; flex-wrap: wrap; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); }
+input, select, textarea { background: var(--bg-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px;
+  font-size: 13px; font-family: inherit; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+input[type="number"] { width: 118px; }
+input[type="text"], input[type="search"] { min-width: 168px; }
+button { background: var(--bg-3); color: var(--text); border: 1px solid var(--line);
+  border-radius: 7px; padding: 8px 14px; font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .7px; cursor: pointer; }
+button:hover { border-color: var(--accent); color: var(--accent); }
+button.primary { background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  color: #04121c; border: 0; }
+button.primary:hover { filter: brightness(1.12); color: #04121c; }
+button.danger { border-color: var(--bad); color: var(--bad); }
+button.danger:hover { background: var(--bad); color: #fff; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ---------- table ---------- */
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th, td { padding: 8px 11px; text-align: left; border-bottom: 1px solid var(--line);
+  white-space: nowrap; }
+th { background: var(--bg-3); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--muted); position: sticky; top: 0; }
+tbody tr:hover { background: var(--bg-3); }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.online { color: var(--good); font-weight: 700; }
+.offline { color: var(--muted); }
+.badge { padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .6px; }
+.badge.player { background: #24304a; color: var(--muted); }
+.badge.moderator { background: rgba(245,158,11,.16); color: var(--warn); }
+.badge.admin { background: rgba(0,212,255,.16); color: var(--accent); }
+.badge.superadmin { background: rgba(124,92,255,.2); color: #b39dff; }
+
+#toast { position: fixed; right: 20px; bottom: 20px; padding: 12px 18px;
+  border-radius: 8px; font-size: 13px; z-index: 200; max-width: 460px;
+  display: none; box-shadow: 0 12px 34px rgba(0,0,0,.5); }
+#toast.ok { display: block; background: #0d3b23; border: 1px solid var(--good);
+  color: #86efac; }
+#toast.err { display: block; background: #3b1414; border: 1px solid var(--bad);
+  color: #fca5a5; }
+.empty { color: var(--muted); font-size: 12px; padding: 14px 0; }
+.hint { color: var(--muted); font-size: 11px; margin-top: 8px; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 860px) {
+  #sidebar { position: static; width: 100%; height: auto;
+    border-right: 0; border-bottom: 1px solid var(--line); }
+  #main { margin-left: 0; padding: 16px; }
+  .cards { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .card .v { font-size: 20px; }
+}

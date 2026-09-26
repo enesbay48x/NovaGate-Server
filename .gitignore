@@ -4,3 +4,46 @@ __pycache__/
 *.db
 server/data/
 
+# ---------------------------------------------------------------------------
+# Scratch / diagnostic artefacts
+# ---------------------------------------------------------------------------
+# Many tools in this project write their output to the repository root as
+# `_something.txt` or `_*_out.log`. None of it is source, and committing it
+# would bury the real changes in noise, so the pattern is excluded wholesale.
+# A file that is genuinely part of the project does not start with `_`.
+_*.txt
+_*.log
+_*.json
+_*.md
+_*.pid
+_*.db
+
+# Tooling directories
+.godot/
+.vscode/
+.mcp.json
+
+# Local test databases and their WAL sidecars
+**/test_*.db
+**/test_*.db-wal
+**/test_*.db-shm
+
+# Root-level one-off scratch scripts (`_fix_ui.py`, `_probe_thing.py`, ...).
+# Scoped to the repository root with a leading slash so the DURABLE tooling in
+# `server/_check_*.py` and `server/_e2e_*.py` is still tracked.
+/_*.py
+/_*.ps1
+/_*.gd
+/_*.gd.uid
+
+# Diagnostic output from Godot / UI inspection passes. These are regenerated on
+# every run and say nothing about the product.
+*.log
+godot_parse_*.txt
+godot_check.txt
+godot_parse_err.txt
+check_*.txt
+fix_*.log
+layout_report.txt
+check_references.txt
+
